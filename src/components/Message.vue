@@ -5,3 +5,4 @@ defineExpose({
   message
 })
 </script>
+<template></template>

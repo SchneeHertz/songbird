@@ -5,3 +5,4 @@ defineExpose({
   dialog
 })
 </script>
+<template></template>

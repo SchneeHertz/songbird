@@ -1,31 +1,45 @@
 <script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import HelloWorld from './components/HelloWorld.vue'
+import { zhCN, dateZhCN} from 'naive-ui'
+import { MdSearch, MdSettings } from '@vicons/ionicons4'
+import { ref } from 'vue'
+import Message from './components/Message.vue'
+import Dialog from './components/Dialog.vue'
+
+const showSettingModel = ref(false)
+const messageRef = ref<InstanceType<typeof Message> | null>(null)
+const dialogRef = ref<InstanceType<typeof Dialog> | null>(null)
+
+const handleSearch = () => {
+}
 </script>
 
 <template>
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
+    <n-grid x-gap="12">
+      <n-gi :offset="4" :span="10">
+        <n-input-group>
+          <n-input></n-input>
+          <n-button type="primary" ghost @click="handleSearch">
+            <template #icon><n-icon><MdSearch /></n-icon></template>
+          </n-button>
+        </n-input-group>
+      </n-gi>
+      <n-gi>
+        <n-button type="primary" ghost @click="showSettingModel = true">
+          <template #icon><n-icon><MdSettings /></n-icon></template>
+        </n-button>
+      </n-gi>
+    </n-grid>
+    <n-message-provider>
+      <Message ref="messageRef"/>
+    </n-message-provider>
+    <n-dialog-provider>
+      <Dialog ref="dialogRef" />
+    </n-dialog-provider>
+  </n-config-provider>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
+<style lang="stylus">
+body
+  margin: 10px
 </style>

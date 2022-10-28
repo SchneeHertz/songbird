@@ -19,6 +19,7 @@ specifiers:
   vite: ^3.2.0
   vue: ^3.2.41
   vue-i18n: ^9.2.2
+  vue-waterfall: ^1.0.6
 
 dependencies:
   glob: 8.0.3
@@ -27,6 +28,7 @@ dependencies:
   sequelize: 6.25.3_sqlite3@5.1.2
   sharp: 0.31.1
   sqlite3: 5.1.2
+  vue-waterfall: 1.0.6
 
 devDependencies:
   '@vicons/ionicons4': 0.12.0
@@ -3421,6 +3423,10 @@ packages:
       '@vue/devtools-api': 6.4.5
       vue: 3.2.41
     dev: true
+
+  /vue-waterfall/1.0.6:
+    resolution: {integrity: sha512-jjOlFLj37SDoxoRQALZrXnEJ4JpQXwQbiz6upxdutpBaKbe/mA+SN+65S15fvm/WUZnVsPUc+vsXC+OXAlkSsw==}
+    dev: false
 
   /vue/3.2.41:
     resolution: {integrity: sha512-uuuvnrDXEeZ9VUPljgHkqB5IaVO8SxhPpqF2eWOukVrBnRBx2THPSGQBnVRt0GrIG1gvCmFXMGbd7FqcT1ixNQ==}

@@ -31,7 +31,8 @@
     "nanoid": "^4.0.0",
     "sequelize": "^6.25.3",
     "sharp": "^0.31.1",
-    "sqlite3": "^5.1.2"
+    "sqlite3": "^5.1.2",
+    "vue-waterfall": "^1.0.6"
   },
   "devDependencies": {
     "@vicons/ionicons4": "^0.12.0",

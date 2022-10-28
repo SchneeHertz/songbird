@@ -5,6 +5,8 @@ const process = require('process')
 const { promisify, format } = require('util')
 const _ = require('lodash')
 const sharp = require('sharp')
+const glob = require('glob')
+const { Sequelize, DataTypes } = require('sequelize')
 
 let STORE_PATH = app.getPath('userData')
 if (!fs.existsSync(STORE_PATH)) {
@@ -85,6 +87,65 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+//database
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: path.join(STORE_PATH, 'database.sqlite')
+})
+const Image = sequelize.define('Image', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    allowNull: false,
+    primaryKey: true
+  },
+  filename: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  path: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  addTime: {
+    type: DataTypes.DATETIME,
+    defaultValue: DataTypes.NOW
+  },
+  tags: {
+    type: DataTypes.ARRAY
+  },
+  mark: {
+    type: DataTypes.BOOLEAN
+  }
+})
+;(async()=>{
+  Image.sync({ alter: true })
+})()
+
+// library
+const getImageList = async (libraryPath)=>{
+  let imageList = await promisify(glob)('**/*.@(jpg|jpeg|png|gif|webp|avif)', {
+    cwd: libraryPath,
+    nocase: true
+  })
+  return imageList
+} 
+ipcMain.handle('load-image-list', async (event, scan)=>{
+  if (scan) {
+    for (let libraryPath of setting.library) {
+      try {
+        let imageList = await getImageList(libraryPath)
+
+      } catch (error) {
+        sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+      }
+    }
+  } else {
+
+  }
+})
+
 
 // setting
 ipcMain.handle('select-folder', async ()=>{

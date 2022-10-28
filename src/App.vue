@@ -1,23 +1,22 @@
-<script setup lang="ts">
-import { zhCN, dateZhCN, MenuOption} from 'naive-ui'
+<script setup>
+import { zhCN, dateZhCN} from 'naive-ui'
 import { MdSearch, MdSettings } from '@vicons/ionicons4'
 import { onMounted, ref } from 'vue'
 import Message from './components/Message.vue'
 import Dialog from './components/Dialog.vue'
 
-const messageRef = ref<InstanceType<typeof Message> | null>(null)
-const dialogRef = ref<InstanceType<typeof Dialog> | null>(null)
-const printMessage = (type:'info' | 'success' | 'warning' | 'error' | 'loading', msg:string) => {
-  messageRef.value?.message.destroyAll()
-  messageRef.value?.message[type](msg)
+const messageRef = ref(null)
+const dialogRef = ref(null)
+const printMessage = (type, msg) => {
+  messageRef.value.message.destroyAll()
+  messageRef.value.message[type](msg)
 }
 
 let setting = ref({})
 const showSettingModel = ref(false)
 
-
 onMounted(()=>{
-  ipcRenderer['send-message']((event:Event, arg:string)=>{
+  ipcRenderer['send-message']((event, arg)=>{
     printMessage('info', arg)
     if (arg.includes('failed')) {
       console.error(arg)
@@ -35,7 +34,7 @@ const handleSearch = () => {
 }
 
 const collapsed = ref(false)
-let folderTree: MenuOption[] = [
+let folderTree = [
   {
     label: '1973年的弹珠玩具',
     key: 'pinball-1973',
@@ -106,7 +105,7 @@ let folderTree: MenuOption[] = [
         :title="$t('ui.setting')"
         style="width: 50vw"
       >
-
+        <n-form :model="setting"></n-form>
       </n-card>
     </n-modal>
     <n-message-provider>

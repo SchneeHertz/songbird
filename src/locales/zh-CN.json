@@ -1,6 +1,13 @@
 {
   "ui": {
-    "setting": "设置"
+    "setting": "设置",
+    "library": "图库",
+    "addLibraryPath": "添加图库位置",
+    "imageExplorer": "外置浏览器",
+    "language": "语言",
+    "manualScan": "手动扫描",
+    "getTag": "获取标签",
+    "save": "保存"
   },
   "message": {
 

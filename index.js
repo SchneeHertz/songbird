@@ -6,7 +6,7 @@ const { promisify, format } = require('util')
 const _ = require('lodash')
 const sharp = require('sharp')
 const glob = require('glob')
-const { Sequelize, DataTypes } = require('sequelize')
+const { Sequelize, DataTypes, Op } = require('sequelize')
 
 let STORE_PATH = app.getPath('userData')
 if (!fs.existsSync(STORE_PATH)) {
@@ -108,19 +108,44 @@ const Image = sequelize.define('Image', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  folder: {
+    type: DataTypes.JSON,
+    allowNull: false
+  },
+  library: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
   addTime: {
-    type: DataTypes.DATETIME,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  modifyTime: {
+    type: DataTypes.DATE
+  },
+  scanTime: {
+    type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   },
   tags: {
-    type: DataTypes.ARRAY
+    type: DataTypes.JSON,
+    defaultValue: []
   },
   mark: {
-    type: DataTypes.BOOLEAN
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  width: {
+    type: DataTypes.FLOAT,
+    allowNull: false
+  },
+  height: {
+    type: DataTypes.FLOAT,
+    allowNull: false
   }
 })
 ;(async()=>{
-  Image.sync({ alter: true })
+  await Image.sync({ alter: true })
 })()
 
 // library
@@ -129,21 +154,148 @@ const getImageList = async (libraryPath)=>{
     cwd: libraryPath,
     nocase: true
   })
-  return imageList
-} 
+  return imageList.map(fn=>path.join(libraryPath, fn))
+}
 ipcMain.handle('load-image-list', async (event, scan)=>{
   if (scan) {
+    let allCount = 1
+    let nowCount = 0
+    let dateStartScan = new Date()
+    let libraryArray = []
     for (let libraryPath of setting.library) {
-      try {
+      // try {
         let imageList = await getImageList(libraryPath)
-
-      } catch (error) {
-        sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
-      }
+        allCount += imageList.length
+        libraryArray.push({
+          libraryPath,
+          imageList
+        })
+      // } catch (error) {
+      //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+      // }
     }
+    for (let {libraryPath, imageList} of libraryArray) {
+      // try {
+        for (let imagePath of imageList) {
+          let findResult = await Image.findOne({
+            where: {
+              path: imagePath,
+              library: libraryPath
+            }
+          })
+          if (findResult) {
+            findResult.update({scanTime: dateStartScan})
+          } else {
+            let subFolder = path.relative(libraryPath, path.dirname(imagePath))
+            if (subFolder === '') {
+              subFolder = []
+            } else {
+              subFolder = subFolder.split(path.sep)
+            }
+            let {width, height} = await sharp(imagePath).metadata()
+            await Image.create({
+              filename: path.basename(imagePath),
+              path: imagePath,
+              folder: [path.basename(libraryPath), ...subFolder],
+              library: libraryPath,
+              modifyTime: fs.statSync(imagePath).mtime,
+              width,
+              height
+            })
+          }
+          nowCount += 1
+          if (nowCount % 100 === 0) mainWindow.setProgressBar(nowCount/allCount)
+        }
+        let scanResult = await Image.findAll({
+          raw: true,
+          where: {
+            library: libraryPath,
+            scanTime: {
+              [Op.eq]: dateStartScan
+            }
+          }
+        })
+        mainWindow.webContents.send('send-image', scanResult)
+      // } catch (error) {
+      //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+      // }
+    }
+    await Image.destroy({
+      where: {
+        scanTime: {
+          [Op.lt]: dateStartScan
+        }
+      }
+    })
+    mainWindow.setProgressBar(-1)
   } else {
-
+    let loadResult = await Image.findAll({raw: true})
+    mainWindow.webContents.send('send-image', loadResult)
   }
+  let folderData = await Image.findAll({
+    raw: true,
+    attributes: ['folder']
+  })
+  return _.sortedUniq(_.sortBy(folderData.map(f=>f.folder)))
+})
+
+ipcMain.handle('force-load-image-list', async ()=>{
+  Image.destroy({
+    truncate: true
+  })
+  let allCount = 1
+  let nowCount = 0
+  let libraryArray = []
+  for (let libraryPath of setting.library) {
+    // try {
+      let imageList = await getImageList(libraryPath)
+      allCount += imageList.length
+      libraryArray.push({
+        libraryPath,
+        imageList
+      })
+    // } catch (error) {
+    //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+    // }
+  }
+  for (let {libraryPath, imageList} of libraryArray) {
+    // try {
+      for (let imagePath of imageList) {
+        let subFolder = path.relative(libraryPath, path.dirname(imagePath))
+        if (subFolder === '') {
+          subFolder = []
+        } else {
+          subFolder = subFolder.split(path.sep)
+        }
+        let {width, height} = await sharp(imagePath).metadata()
+        await Image.create({
+          filename: path.basename(imagePath),
+          path: imagePath,
+          folder: [path.basename(libraryPath), ...subFolder],
+          library: libraryPath,
+          modifyTime: fs.statSync(imagePath).mtime,
+          width, height
+        })
+        nowCount += 1
+        if (nowCount % 100 === 0) mainWindow.setProgressBar(nowCount/allCount)
+      }
+      let scanResult = await Image.findAll({
+        raw: true,
+        where: {
+          library: libraryPath
+        }
+      })
+      mainWindow.webContents.send('send-image', scanResult)
+    // } catch (error) {
+    //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+    // }
+    mainWindow.setProgressBar(-1)
+  }
+  let folderData = await Image.findAll({
+    raw: true,
+    attributes: ['folder']
+  })
+  return _.sortedUniq(_.sortBy(folderData.map(f=>f.folder)))
 })
 
 

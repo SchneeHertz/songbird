@@ -6,6 +6,7 @@
     "imageExplorer": "外置浏览器",
     "language": "语言",
     "manualScan": "手动扫描",
+    "forceScan": "重建图库",
     "getTag": "获取标签",
     "save": "保存"
   },

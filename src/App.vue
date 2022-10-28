@@ -2,8 +2,8 @@
 import { zhCN, dateZhCN} from 'naive-ui'
 import { MdSearch, MdSettings, MdArchive, MdOpen } from '@vicons/ionicons4'
 import { onMounted, ref } from 'vue'
-import Waterfall from 'vue-waterfall/lib/waterfall.vue'
-import WaterfallSlot from 'vue-waterfall/lib/waterfall-slot.vue'
+import { nanoid } from 'nanoid'
+import { MasonryInfiniteGrid } from "@egjs/vue3-infinitegrid"
 import Message from './components/Message.vue'
 import Dialog from './components/Dialog.vue'
 
@@ -44,26 +44,38 @@ onMounted(()=>{
   })
 })
 
+
+// library
+const imageLibrary = ref([])
+onMounted(()=>{
+  ipcRenderer['send-image']((event, imageList)=>{
+    imageLibrary.value = imageLibrary.value.concat(imageList)
+    cacheImageList.value = cacheImageList.value.concat(imageList)
+    if (displayImageList.value.length < 1) {
+      onRequestAppend({})
+    }
+  })
+})
+const cacheImageList = ref([])
+const displayImageList = ref([])
+const onRequestAppend = (e)=>{
+  let groupKey = (e.groupKey || 0) + 1
+  for (let i=1; i<=20; i++) {
+    if (!_.isEmpty(cacheImageList.value)) {
+      let item = cacheImageList.value.pop()
+      item.groupKey = groupKey
+      displayImageList.value.push(item)
+    }
+  }
+}
+
+// search
 const handleSearch = ()=>{
 }
 
+// folder
 const collapsed = ref(false)
-let folderTree = [
-  {
-    label: '1973年的弹珠玩具',
-    key: 'pinball-1973',
-    children: [
-      {
-        label: '鼠',
-        key: 'rat'
-      }
-    ]
-  },
-  {
-    label: '寻羊冒险记',
-    key: 'a-wild-sheep-chase',
-  }
-]
+let folderTree = ref([])
 
 //setting
 const showSettingModel = ref(false)
@@ -110,9 +122,49 @@ const languageOption = [
   {label: 'zh-CN', value: 'zh-CN'},
   {label: 'en-US', value: 'en-US'},
 ]
-const scanLibrary = ()=>{
-
+const resolveFoldersList = (foldersList)=>{
+    _.reverse(foldersList)
+    let folderTreeObject = {}
+    for(let foldersStr of foldersList){
+      let folders = JSON.parse(foldersStr)
+      _.set(folderTreeObject, folders, {})
+    }
+    let resolveTree = (preRoot, tree)=>{
+      _.forIn(tree, (node, label)=>{
+        if (_.isEmpty(node)) {
+          preRoot.push({
+            label,
+            key: nanoid()
+          })
+        } else {
+          preRoot.push({
+            label,
+            key: nanoid(),
+            children: resolveTree([], node)
+          })
+        }
+      })
+      return preRoot
+    }
+    folderTree.value = _.reverse(resolveTree([], folderTreeObject))
+  }
+const scanLibrary = (scan)=>{
+  imageLibrary.value = []
+  cacheImageList.value = []
+  displayImageList.value = []
+  ipcRenderer['load-image-list'](scan)
+  .then(res=>resolveFoldersList(res))
 }
+const forceScanLibrary = ()=>{
+  imageLibrary.value = []
+  cacheImageList.value = []
+  displayImageList.value = []
+  ipcRenderer['force-load-image-list']()
+  .then(res=>resolveFoldersList(res))
+}
+onMounted(()=>{
+  scanLibrary(false)
+})
 </script>
 
 <template>
@@ -143,23 +195,30 @@ const scanLibrary = ()=>{
           bordered
           :native-scrollbar="false"
           collapse-mode="width"
-          :collapsed-width="16"
+          :collapsed-width="10"
           :width="240"
           :collapsed="collapsed"
           show-trigger
           @collapse="collapsed = true"
           @expand="collapsed = false"
         >
-          <n-menu :options="folderTree"></n-menu>
+          <n-tree :data="folderTree"></n-tree>
         </n-layout-sider>
-        <n-layout-content>
-          <n-grid x-gap="12">
-            <n-gi :span="4"></n-gi>
-            <n-gi :span="4"></n-gi>
-            <n-gi :span="6"></n-gi>
-            <n-gi :span="6"></n-gi>
-            <n-gi :span="4"></n-gi>
-          </n-grid>
+        <n-layout-content id="ccc" content-style="padding:10px;">
+          <masonry-infinite-grid
+            :gap="5"
+            :container="true"
+            className="masonry-container"
+            @requestAppend="onRequestAppend"
+            @changeScroll="onChangeScroll"
+          >
+            <div
+              class="item"
+              v-for="item in displayImageList"
+              :key="item.id"
+              :data-grid-groupkey="item.groupKey"
+            ><img :style="{width: '180px', height: 180*item.height/item.width + 'px'}" :src="item.path" /></div>
+          </masonry-infinite-grid>
         </n-layout-content>
       </n-layout>
     </n-layout>
@@ -201,8 +260,9 @@ const scanLibrary = ()=>{
           ></n-select>
         </n-form-item>
       </n-form>
-      <n-button class="action-button" secondary type="primary" @click="scanLibrary">{{$t('ui.manualScan')}}</n-button>
-      <n-button class="action-button" secondary type="warning">{{$t('ui.getTag')}}</n-button>
+      <n-button class="action-button" secondary type="primary" @click="scanLibrary(true)">{{$t('ui.manualScan')}}</n-button>
+      <n-button class="action-button" secondary type="warning" @click="forceScanLibrary">{{$t('ui.forceScan')}}</n-button>
+      <n-button class="action-button" secondary type="primary">{{$t('ui.getTag')}}</n-button>
       <template #action>
         <n-button type="success" @click="saveSetting">{{$t('ui.save')}}</n-button>
       </template>
@@ -221,6 +281,9 @@ body
   margin: 10px
 .header-button
   margin-right: 12px
+
+.masonry-container
+  height: calc(100vh - 100px)
 
 .action-button
   margin-right: 4px

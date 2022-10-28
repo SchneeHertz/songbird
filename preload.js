@@ -6,5 +6,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   'select-folder': ()=>ipcRenderer.invoke('select-folder'),
   'select-file': ()=>ipcRenderer.invoke('select-file'),
   'send-message': (func)=>ipcRenderer.on('send-message', func),
-  'load-picture-list': (scan)=>ipcRenderer.invoke('load-picture-list', scan),
+  'load-image-list': (scan)=>ipcRenderer.invoke('load-image-list', scan),
+  'force-load-image-list': ()=>ipcRenderer.invoke('force-load-image-list'),
+  'send-image': (func)=>ipcRenderer.on('send-image', func),
 })

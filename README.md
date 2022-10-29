@@ -1,5 +1,6 @@
 # Songbird
 中文介绍 | [English Readme](https://github.com/SchneeHertz/songbird/master/README_EN.md)
+
 <img src="https://raw.githubusercontent.com/SchneeHertz/songbird/master/public/icon.png" alt="icon.png" width="256"/>
 
 一个基于标签的图片管理软件

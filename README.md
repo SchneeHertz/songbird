@@ -1,9 +1,12 @@
 # Songbird
-中文介绍 | [English Readme](https://github.com/SchneeHertz/songbird/master/README_EN.md)
+中文介绍 | [English Readme](https://github.com/SchneeHertz/songbird/blob/master/README_EN.md)
 
 <img src="https://raw.githubusercontent.com/SchneeHertz/songbird/master/public/icon.png" alt="icon.png" width="256"/>
 
 一个基于标签的图片管理软件
+
+![home.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/home.jpg)
+![tags.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/tags.jpg)
 
 ## 功能
 1. 给图片打多个标签

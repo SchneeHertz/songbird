@@ -1,9 +1,12 @@
 # Songbird
-[中文介绍](https://github.com/SchneeHertz/songbird/master/README.md) | English Readme
+[中文介绍](https://github.com/SchneeHertz/songbird/blob/master/README.md) | English Readme
 
 <img src="https://raw.githubusercontent.com/SchneeHertz/songbird/master/public/icon.png" alt="icon.png" width="256"/>
 
 A tag-based image management software
+
+![home.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/home.jpg)
+![tags.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/tags.jpg)
 
 ## Features
 1. tagging images with multiple tags

@@ -1,13 +1,21 @@
 {
   "ui": {
+    "view": "查看",
+    "openLocale": "打开所在位置",
+    "saveTags": "保存tag修改",
+    "manualScan": "手动扫描",
+    "forceScan": "重建图库",
+    "serverUpInfo": "Deepdanbooru服务正常",
+    "serverDownInfo": "Deepdanbooru服务异常",
+    "getTag": "获取标签",
     "setting": "设置",
     "library": "图库",
     "addLibraryPath": "添加图库位置",
     "imageExplorer": "外置浏览器",
     "language": "语言",
-    "manualScan": "手动扫描",
-    "forceScan": "重建图库",
-    "getTag": "获取标签",
+    "deepdanbooruTagScoreThreshold": "Deepdanbooru分数阈值",
+    "waterfallGap": "瀑布流横向间距",
+    "waterfallThumbWidth": "瀑布流图片宽度",
     "save": "保存"
   },
   "message": {

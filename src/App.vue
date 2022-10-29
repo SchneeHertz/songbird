@@ -1,11 +1,22 @@
 <script setup>
-import { zhCN, dateZhCN} from 'naive-ui'
-import { MdSearch, MdSettings, MdArchive, MdOpen } from '@vicons/ionicons4'
+import { zhCN, dateZhCN, enUS, dateEnUS, NIcon, NTag} from 'naive-ui'
+import {
+  MdSearch,
+  MdSettings,
+  MdArchive,
+  MdOpen,
+  MdCheckmarkCircleOutline,
+  MdCloseCircleOutline,
+  MdFolderOpen,
+  MdRefresh,
+} from '@vicons/ionicons4'
 import { onMounted, ref } from 'vue'
 import { nanoid } from 'nanoid'
 import { MasonryInfiniteGrid } from "@egjs/vue3-infinitegrid"
+import { useI18n } from 'vue-i18n'
 import Message from './components/Message.vue'
 import Dialog from './components/Dialog.vue'
+import tags from './assets/tags.json'
 
 const messageRef = ref(null)
 const dialogRef = ref(null)
@@ -44,11 +55,14 @@ onMounted(()=>{
   })
 })
 
-
 // library
 const imageLibrary = ref([])
 onMounted(()=>{
   ipcRenderer['send-image']((event, imageList)=>{
+    imageList.map(imageObject=>{
+      imageObject.folder = imageObject.folder.split('||')
+      imageObject.tags = JSON.parse(imageObject.tags)
+    })
     imageLibrary.value = imageLibrary.value.concat(imageList)
     cacheImageList.value = cacheImageList.value.concat(imageList)
     if (displayImageList.value.length < 1) {
@@ -68,14 +82,171 @@ const onRequestAppend = (e)=>{
     }
   }
 }
+const imageDetail = ref({})
+const showDetailDrawer = ref(false)
+const openDetail = (imageObject)=>{
+  showDetailDrawer.value = true
+  imageDetail.value = imageObject
+}
+const renderTag = (tag, index) => {
+  return h(
+    NTag,
+    {
+      size: 'small',
+      closable: true,
+      'trigger-click-on-close': false,
+      onClose: ()=>{
+        imageDetail.value.tags.splice(index, 1)
+      },
+      onClick: ()=>{
+        searchString.value.push(tag)
+      }
+    },
+    {
+      default: () => tag
+    }
+  );
+}
+const updateImage = ()=>{
+  console.log(imageDetail.value)
+  ipcRenderer['update-image'](_.cloneDeep(imageDetail.value))
+}
+const openWithExternalViewer = (path)=>{
+  ipcRenderer['open-local-image'](path)
+}
+const openImageLocale = (path)=>{
+  ipcRenderer['show-file'](path)
+}
 
 // search
+const reloadPage = ()=>{
+  window.location.reload()
+}
+const searchString = ref([])
 const handleSearch = ()=>{
+  if (_.isEmpty(searchString)) {
+    clearSearch()
+    return
+  }
+  cacheImageList.value = []
+  displayImageList.value = []
+  let result = _.filter(imageLibrary.value, imageObject=>{
+    return _.every(searchString.value, word=>{
+      return imageObject.tags.includes(word) || imageObject.path.includes(word)
+    })
+  })
+  cacheImageList.value = result
+  onRequestAppend({})
+}
+const clearSearch = ()=>{
+  cacheImageList.value = [...imageLibrary.value]
+  displayImageList.value = []
+  onRequestAppend({})
 }
 
 // folder
 const collapsed = ref(false)
-let folderTree = ref([])
+const TriggerCollapse = ()=>{
+  collapsed.value = !collapsed.value
+}
+const folderTree = ref([])
+const resolveFoldersList = (foldersList)=>{
+  // _.reverse(foldersList)
+  let folderTreeObject = {}
+  for(let foldersStr of foldersList){
+    let folders = foldersStr.split('||')
+    _.set(folderTreeObject, folders, {})
+  }
+  let resolveTree = (preRoot, tree, initFolder)=>{
+    _.forIn(tree, (node, label)=>{
+      if (_.isEmpty(node)) {
+        preRoot.push({
+          label,
+          key: nanoid(),
+          folder: [...initFolder, label],
+          prefix: ()=>h(NIcon, {}, {default: ()=>h(MdFolderOpen)})
+        })
+      } else {
+        preRoot.push({
+          label,
+          key: nanoid(),
+          folder: [...initFolder, label],
+          children: resolveTree([], node, [...initFolder, label]),
+          prefix: ()=>h(NIcon, {}, {default: ()=>h(MdFolderOpen)})
+        })
+      }
+    })
+    return preRoot
+  }
+  folderTree.value = _.reverse(resolveTree([], folderTreeObject, []))
+}
+const nodeProps = ({ option })=>{
+  return {
+    onClick() {
+      emptyList()
+      ipcRenderer['search-folder'](_.cloneDeep(option.folder))
+    }
+  }
+}
+
+
+// tag
+const tagServerStatus = ref(false)
+const testServer = ()=>{
+  axios.get('http://localhost:12421/test')
+  .then(res=>{
+    if (res.status == 200) {
+      tagServerStatus.value = true
+    }
+  })
+  .catch(error=>{
+    tagServerStatus.value = false
+  })
+}
+let testInterval
+onMounted(()=>{
+  testServer()
+  testInterval = setInterval(testServer, 10000)
+})
+onUnmounted(()=>{
+  clearInterval(testInterval)
+})
+const getTagForLibrary = ()=>{
+  try {
+    let threshold = _.inRange(setting.value.deepdanbooruTagScoreThreshold, 0, 1) ? setting.value.deepdanbooruTagScoreThreshold : 0
+    let allCount = imageLibrary.value.length
+    let nowCount = 0
+    for (let imageObject of imageLibrary.value) {
+      if (_.isEmpty(imageObject.tags)) {
+        let fd = new FormData()
+        fd.append('filepath', imageObject.path)
+        axios.post('http://localhost:12421/predict', fd)
+        .then(res=>{
+          let filterResult = _.pickBy(res.data, value=>value>threshold)
+          if (_.isEmpty(filterResult)) {
+            imageObject.tags = ['not_match']
+          } else {
+            imageObject.tags = _.keys(filterResult)
+          }
+          ipcRenderer['update-image'](_.cloneDeep(imageObject))
+          nowCount++
+          ipcRenderer['set-progress-bar'](nowCount/allCount)
+          if (nowCount === allCount) {
+            ipcRenderer['set-progress-bar'](-1)
+            printMessage('success', 'Get Tags Complete')
+          }
+        })
+      } else {
+        nowCount++
+      }
+    }
+    ipcRenderer['set-progress-bar'](-1)
+  } catch (error) {
+    console.log(error)
+    ipcRenderer['set-progress-bar'](-1)
+  }
+}
+
 
 //setting
 const showSettingModel = ref(false)
@@ -84,6 +255,7 @@ onMounted(()=>{
   ipcRenderer['load-setting']()
   .then(res=>{
     setting.value = res
+    handleLanguageChange(setting.value.language)
   })
 })
 const saveSetting = ()=>{
@@ -122,43 +294,49 @@ const languageOption = [
   {label: 'zh-CN', value: 'zh-CN'},
   {label: 'en-US', value: 'en-US'},
 ]
-const resolveFoldersList = (foldersList)=>{
-    _.reverse(foldersList)
-    let folderTreeObject = {}
-    for(let foldersStr of foldersList){
-      let folders = JSON.parse(foldersStr)
-      _.set(folderTreeObject, folders, {})
+const locale = ref({})
+const dateLocale = ref({})
+const { locale:i18n } = useI18n()
+const handleLanguageChange = (val)=>{
+  ipcRenderer['get-locale']().then(localeString=>{
+    let languageCode
+    if (!val || (val === 'default')) {
+      languageCode = localeString
+    } else {
+      languageCode = val
     }
-    let resolveTree = (preRoot, tree)=>{
-      _.forIn(tree, (node, label)=>{
-        if (_.isEmpty(node)) {
-          preRoot.push({
-            label,
-            key: nanoid()
-          })
-        } else {
-          preRoot.push({
-            label,
-            key: nanoid(),
-            children: resolveTree([], node)
-          })
-        }
-      })
-      return preRoot
+    switch (languageCode) {
+      case 'zh-CN':
+        locale.value = zhCN
+        dateLocale.value = dateZhCN
+        i18n.value = 'zh-CN'
+        break
+      case 'en-US':
+        locale.value = enUS
+        dateLocale.value = dateEnUS
+        i18n.value = 'en-US'
+        break
+      default:
+        locale.value = zhCn
+        dateLocale.value = dateZhCN
+        i18n.value = 'zh-CN'
+        break
     }
-    folderTree.value = _.reverse(resolveTree([], folderTreeObject))
-  }
-const scanLibrary = (scan)=>{
+    saveSetting()
+  })
+}
+const emptyList = ()=>{
   imageLibrary.value = []
   cacheImageList.value = []
   displayImageList.value = []
+}
+const scanLibrary = (scan)=>{
+  emptyList()
   ipcRenderer['load-image-list'](scan)
   .then(res=>resolveFoldersList(res))
 }
 const forceScanLibrary = ()=>{
-  imageLibrary.value = []
-  cacheImageList.value = []
-  displayImageList.value = []
+  emptyList()
   ipcRenderer['force-load-image-list']()
   .then(res=>resolveFoldersList(res))
 }
@@ -168,27 +346,35 @@ onMounted(()=>{
 </script>
 
 <template>
-  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
+  <n-config-provider :locale="locale" :date-locale="dateLocale">
     <n-layout>
       <n-layout-header>
-        <n-grid x-gap="12">
-          <n-gi :offset="4" :span="10">
-            <n-input-group>
-              <n-input></n-input>
-              <n-button type="primary" ghost @click="handleSearch">
-                <template #icon><n-icon><MdSearch /></n-icon></template>
-              </n-button>
-            </n-input-group>
-          </n-gi>
-          <n-gi :span="5">
-            <n-button class="header-button" type="primary" ghost @click="showSettingModel = true">
-              <template #icon><n-icon><MdSettings /></n-icon></template>
+        <n-space justify="center">
+          <n-button class="header-button" type="primary" ghost @click="reloadPage">
+            <template #icon><n-icon><MdRefresh /></n-icon></template>
+          </n-button>
+          <n-input-group style="width: 50vw;">
+            <n-select
+              v-model:value="searchString"
+              filterable
+              multiple
+              clearable
+              tag
+              max-tag-count="responsive"
+              :options="tags"
+              @clear="clearSearch"
+              ></n-select>
+            <n-button type="primary" ghost @click="handleSearch">
+              <template #icon><n-icon><MdSearch /></n-icon></template>
             </n-button>
-            <n-button class="header-button" type="primary" ghost>
-              <template #icon><n-icon><MdArchive /></n-icon></template>
-            </n-button>
-          </n-gi>
-        </n-grid>
+          </n-input-group>
+          <n-button class="header-button" type="primary" ghost @click="showSettingModel = true">
+            <template #icon><n-icon><MdSettings /></n-icon></template>
+          </n-button>
+          <n-button class="header-button" type="primary" ghost>
+            <template #icon><n-icon><MdArchive /></n-icon></template>
+          </n-button>
+        </n-space>
       </n-layout-header>
       <n-layout has-sider>
         <n-layout-sider
@@ -199,29 +385,61 @@ onMounted(()=>{
           :width="240"
           :collapsed="collapsed"
           show-trigger
-          @collapse="collapsed = true"
-          @expand="collapsed = false"
+          @collapse="TriggerCollapse"
+          @expand="TriggerCollapse"
+          style="margin-top:10px;"
         >
-          <n-tree :data="folderTree"></n-tree>
+          <n-tree
+            :data="folderTree"
+            :node-props="nodeProps"
+          ></n-tree>
         </n-layout-sider>
-        <n-layout-content id="ccc" content-style="padding:10px;">
+        <n-layout-content content-style="padding:10px;">
           <masonry-infinite-grid
-            :gap="5"
+            :gap="setting.waterfallGap || 10"
             :container="true"
+            ref="masonry"
             className="masonry-container"
             @requestAppend="onRequestAppend"
-            @changeScroll="onChangeScroll"
           >
             <div
               class="item"
               v-for="item in displayImageList"
               :key="item.id"
               :data-grid-groupkey="item.groupKey"
-            ><img :style="{width: '180px', height: 180*item.height/item.width + 'px'}" :src="item.path" /></div>
+            >
+              <img
+                class="waterfall-image"
+                :style="{
+                  width: setting.waterfallThumbWidth || 200 + 'px',
+                  height: (setting.waterfallThumbWidth || 200) * item.height / item.width + 'px'
+                }"
+                :src="item.path"
+                @click="openDetail(item)"
+                @contextmenu="openWithExternalViewer(item.path)"
+              />
+            </div>
           </masonry-infinite-grid>
         </n-layout-content>
       </n-layout>
     </n-layout>
+    <n-drawer
+      v-model:show="showDetailDrawer"
+      :width="600"
+    >
+      <n-drawer-content class="detail-drawer" :native-scrollbar="false">
+        <img class="detail-image" :src="imageDetail.path" />
+        <n-divider dashed style="margin: 4px 0;"></n-divider>
+        <n-button class="detail-button" size="small" secondary type="primary" @click="openWithExternalViewer(imageDetail.path)">{{$t('ui.view')}}</n-button>
+        <n-button class="detail-button" size="small" secondary type="primary" @click="openImageLocale(imageDetail.path)">{{$t('ui.openLocale')}}</n-button>
+        <n-button class="detail-button" size="small" secondary type="primary" @click="updateImage">{{$t('ui.saveTags')}}</n-button>
+        <n-dynamic-tags
+          v-model:value="imageDetail.tags"
+          size="small"
+          :render-tag="renderTag"
+        />
+      </n-drawer-content>
+    </n-drawer>
     <n-modal
       v-model:show="showSettingModel"
       preset="dialog"
@@ -229,6 +447,22 @@ onMounted(()=>{
       style="width: 50vw"
       :show-icon="false"
     >
+      <n-button class="action-button" secondary type="primary" @click="scanLibrary(true)">{{$t('ui.manualScan')}}</n-button>
+      <n-button class="action-button" secondary type="warning" @click="forceScanLibrary">{{$t('ui.forceScan')}}</n-button>
+      <n-button-group>
+        <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus" @click="getTagForLibrary">{{$t('ui.getTag')}}</n-button>
+        <n-tooltip trigger="hover">
+        <template #trigger>
+          <n-button class="action-button" secondary :type="tagServerStatus ? 'primary' : 'error'" disabled tag="div">
+            <template #icon><n-icon>
+              <MdCheckmarkCircleOutline v-if="tagServerStatus" />
+              <MdCloseCircleOutline v-else />
+            </n-icon></template>
+          </n-button>
+        </template>
+        {{tagServerStatus ? $t('ui.serverUpInfo') : $t('ui.serverDownInfo')}}
+      </n-tooltip>
+      </n-button-group>
       <n-divider />
       <n-form :model="setting">
         <n-form-item path="library" :label="$t('ui.library')">
@@ -256,13 +490,39 @@ onMounted(()=>{
           <n-select
             v-model:value="setting.language"
             :options="languageOption"
-            @update:value="saveSetting"
+            @update:value="handleLanguageChange(setting.language)"
           ></n-select>
         </n-form-item>
       </n-form>
-      <n-button class="action-button" secondary type="primary" @click="scanLibrary(true)">{{$t('ui.manualScan')}}</n-button>
-      <n-button class="action-button" secondary type="warning" @click="forceScanLibrary">{{$t('ui.forceScan')}}</n-button>
-      <n-button class="action-button" secondary type="primary">{{$t('ui.getTag')}}</n-button>
+      <n-form inline :model="setting" >
+        <n-form-item path="deepdanbooruTagScoreThreshold" :label="$t('ui.deepdanbooruTagScoreThreshold')">
+          <n-input-number
+            v-model:value="setting.deepdanbooruTagScoreThreshold"
+            :clearable="false"
+            :max="1"
+            :min="0"
+            :precision="2"
+            :step="0.1"
+            @update:value="saveSetting"
+          ></n-input-number>
+        </n-form-item>
+        <n-form-item path="waterfallGap" :label="$t('ui.waterfallGap')">
+          <n-input-number
+            v-model:value="setting.waterfallGap"
+            :clearable="false"
+            :min="1"
+            @update:value="saveSetting"
+          ></n-input-number>
+        </n-form-item>
+        <n-form-item path="waterfallThumbWidth" :label="$t('ui.waterfallThumbWidth')">
+          <n-input-number
+            v-model:value="setting.waterfallThumbWidth"
+            :clearable="false"
+            :min="100"
+            @update:value="saveSetting"
+          ></n-input-number>
+        </n-form-item>
+      </n-form>
       <template #action>
         <n-button type="success" @click="saveSetting">{{$t('ui.save')}}</n-button>
       </template>
@@ -278,12 +538,20 @@ onMounted(()=>{
 
 <style lang="stylus">
 body
-  margin: 10px
-.header-button
-  margin-right: 12px
+  margin: 10px 0 10px 10px
 
 .masonry-container
-  height: calc(100vh - 100px)
+  height: calc(100vh - 75px)
+  .waterfall-image
+    border-radius: 4px
+
+.detail-drawer
+  text-align: center
+  .detail-image
+    max-width: 420px
+    max-height: 500px
+  .detail-button
+    margin: 4px
 
 .action-button
   margin-right: 4px

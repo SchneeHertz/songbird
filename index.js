@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, session, dialog, shell, screen } =require('electron')
+const { app, BrowserWindow, ipcMain, session, dialog, shell } =require('electron')
 const path = require('path')
 const fs = require('fs')
 const process = require('process')
+const { spawn } = require('child_process')
 const { promisify, format } = require('util')
 const _ = require('lodash')
 const sharp = require('sharp')
@@ -21,7 +22,10 @@ try {
     library: [app.getPath('pictures')],
     imageExplorer: 'C:\\Windows\\explorer.exe',
     loadOnStart: false,
-    language: 'default'
+    language: 'default',
+    deepdanbooruTagScoreThreshold: 0,
+    waterfallGap: 10,
+    waterfallThumbWidth: 200
   }
   fs.writeFileSync(path.join(STORE_PATH, 'setting.json'), JSON.stringify(setting, null, '  '), {encoding: 'utf-8'})
 }
@@ -88,10 +92,17 @@ app.on('window-all-closed', () => {
   }
 })
 
+// basic
+ipcMain.handle('set-progress-bar', async(event, progress)=>{
+  console.log(progress)
+  mainWindow.setProgressBar(progress)
+})
+
 //database
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: path.join(STORE_PATH, 'database.sqlite')
+  storage: path.join(STORE_PATH, 'database.sqlite'),
+  logging: false
 })
 const Image = sequelize.define('Image', {
   id: {
@@ -101,19 +112,19 @@ const Image = sequelize.define('Image', {
     primaryKey: true
   },
   filename: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: false
   },
   path: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: false
   },
   folder: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: false
   },
   library: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: false
   },
   addTime: {
@@ -142,7 +153,16 @@ const Image = sequelize.define('Image', {
   height: {
     type: DataTypes.FLOAT,
     allowNull: false
-  }
+  },
+  thumbPath: {
+    type: DataTypes.TEXT
+  },
+  thumbWidth: {
+    type: DataTypes.FLOAT
+  },
+  thumbHeight: {
+    type: DataTypes.FLOAT
+  },
 })
 ;(async()=>{
   await Image.sync({ alter: true })
@@ -163,19 +183,19 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
     let dateStartScan = new Date()
     let libraryArray = []
     for (let libraryPath of setting.library) {
-      // try {
+      try {
         let imageList = await getImageList(libraryPath)
         allCount += imageList.length
         libraryArray.push({
           libraryPath,
           imageList
         })
-      // } catch (error) {
-      //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
-      // }
+      } catch (error) {
+        sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+      }
     }
     for (let {libraryPath, imageList} of libraryArray) {
-      // try {
+      try {
         for (let imagePath of imageList) {
           let findResult = await Image.findOne({
             where: {
@@ -196,7 +216,7 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
             await Image.create({
               filename: path.basename(imagePath),
               path: imagePath,
-              folder: [path.basename(libraryPath), ...subFolder],
+              folder: [path.basename(libraryPath), ...subFolder].join('||'),
               library: libraryPath,
               modifyTime: fs.statSync(imagePath).mtime,
               width,
@@ -211,14 +231,14 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
           where: {
             library: libraryPath,
             scanTime: {
-              [Op.eq]: dateStartScan
+              [Op.gte]: dateStartScan
             }
           }
         })
         mainWindow.webContents.send('send-image', scanResult)
-      // } catch (error) {
-      //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
-      // }
+      } catch (error) {
+        sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+      }
     }
     await Image.destroy({
       where: {
@@ -236,6 +256,7 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
     raw: true,
     attributes: ['folder']
   })
+  sendMessageToWebContents('loaded success')
   return _.sortedUniq(_.sortBy(folderData.map(f=>f.folder)))
 })
 
@@ -247,19 +268,19 @@ ipcMain.handle('force-load-image-list', async ()=>{
   let nowCount = 0
   let libraryArray = []
   for (let libraryPath of setting.library) {
-    // try {
+    try {
       let imageList = await getImageList(libraryPath)
       allCount += imageList.length
       libraryArray.push({
         libraryPath,
         imageList
       })
-    // } catch (error) {
-    //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
-    // }
+    } catch (error) {
+      sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+    }
   }
   for (let {libraryPath, imageList} of libraryArray) {
-    // try {
+    try {
       for (let imagePath of imageList) {
         let subFolder = path.relative(libraryPath, path.dirname(imagePath))
         if (subFolder === '') {
@@ -271,7 +292,7 @@ ipcMain.handle('force-load-image-list', async ()=>{
         await Image.create({
           filename: path.basename(imagePath),
           path: imagePath,
-          folder: [path.basename(libraryPath), ...subFolder],
+          folder: [path.basename(libraryPath), ...subFolder].join('||'),
           library: libraryPath,
           modifyTime: fs.statSync(imagePath).mtime,
           width, height
@@ -286,18 +307,50 @@ ipcMain.handle('force-load-image-list', async ()=>{
         }
       })
       mainWindow.webContents.send('send-image', scanResult)
-    // } catch (error) {
-    //   sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
-    // }
+    } catch (error) {
+      sendMessageToWebContents(`load library ${libraryPath} failed because ${error}`)
+    }
     mainWindow.setProgressBar(-1)
   }
   let folderData = await Image.findAll({
     raw: true,
     attributes: ['folder']
   })
+  sendMessageToWebContents('force loaded success')
   return _.sortedUniq(_.sortBy(folderData.map(f=>f.folder)))
 })
+ipcMain.handle('open-local-image', async (event, filepath)=>{
+  spawn(setting.imageExplorer, [filepath])
+})
+ipcMain.handle('show-file', async (event, filepath)=>{
+  shell.showItemInFolder(filepath)
+})
 
+// folder
+ipcMain.handle('search-folder', async(event, folder)=>{
+  console.log(folder)
+  let result = await Image.findAll({
+    raw: true,
+    where: {
+      folder: {
+        [Op.startsWith]: folder.join('||')
+      }
+    }
+  })
+  mainWindow.webContents.send('send-image', result)
+  sendMessageToWebContents('loaded success')
+})
+
+
+// tags
+ipcMain.handle('update-image', async (event, imageObject)=>{
+  imageObject.folder = imageObject.folder.join('||')
+  return await Image.update(imageObject, {
+    where: {
+      id: imageObject.id
+    }
+  })
+})
 
 // setting
 ipcMain.handle('select-folder', async ()=>{
@@ -335,4 +388,8 @@ ipcMain.handle('save-setting', async (event, receiveSetting)=>{
     })
   }
   return await fs.promises.writeFile(path.join(STORE_PATH, 'setting.json'), JSON.stringify(setting, null, '  '), {encoding: 'utf-8'})
+})
+
+ipcMain.handle('get-locale', async(event, arg)=>{
+  return app.getLocale()
 })

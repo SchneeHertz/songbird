@@ -5,15 +5,18 @@ import _ from 'lodash'
 
 import { createI18n } from 'vue-i18n'
 import zhCn from './locales/zh-CN.json'
+import enUs from './locales/en-US.json'
 
 window._ = _
 
 const app = createApp(App)
 app.use(createI18n({
+  legacy: false,
   locale: 'zh-CN',
   fallbackLocale: 'zh-CN',
   messages: {
-    'zh-CN': zhCn
+    'zh-CN': zhCn,
+    'en-US': enUs
   }
 }))
 

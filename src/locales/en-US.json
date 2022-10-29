@@ -1,0 +1,24 @@
+{
+  "ui": {
+    "view": "view",
+    "openLocale": "Open Locale",
+    "saveTags": "Save Tag",
+    "manualScan": "Manual Scan",
+    "forceScan": "Rebuild Library",
+    "serverUpInfo": "Deepdanbooru server ready",
+    "serverDownInfo": "Deepdanbooru server error",
+    "getTag": "Get Tag",
+    "setting": "Setting",
+    "library": "Librarys",
+    "addLibraryPath": "Add Library Path",
+    "imageExplorer": "External Viewer",
+    "language": "Language",
+    "deepdanbooruTagScoreThreshold": "Deepdanbooru Threshold",
+    "waterfallGap": "Waterfall Gap",
+    "waterfallThumbWidth": "Waterfall Thumb Width",
+    "save": "Save"
+  },
+  "message": {
+
+  }
+}

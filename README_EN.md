@@ -16,7 +16,7 @@ A tag-based image management software
 
 ## Instructions for use
 1. in the settings window, select the folder containing the images, click on manual scan
-2. go to the download DeepDanbooru-flask server, run it, and keep the cmd window open
+2. go to https://github.com/SchneeHertz/deepdanbooru-flask/releases/latest download DeepDanbooru-flask server, run it, and keep the cmd window open
 3. Wait for the server to finish testing in the settings window, and click Get Tags.
 4. the top search bar supports search tags and file paths, the left side can switch between galleries
 5. left click on the image to open the details, right click to open the associated external browser

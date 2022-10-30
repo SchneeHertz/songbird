@@ -5,6 +5,7 @@
     "saveTags": "Save Tag",
     "manualScan": "Manual Scan",
     "forceScan": "Rebuild Library",
+    "areYouSure": "Are you sure?",
     "serverUpInfo": "Deepdanbooru server ready",
     "serverDownInfo": "Deepdanbooru server error",
     "getTag": "Get Tag",

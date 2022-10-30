@@ -94,7 +94,6 @@ app.on('window-all-closed', () => {
 
 // basic
 ipcMain.handle('set-progress-bar', async(event, progress)=>{
-  console.log(progress)
   mainWindow.setProgressBar(progress)
 })
 
@@ -176,6 +175,7 @@ const getImageList = async (libraryPath)=>{
   })
   return imageList.map(fn=>path.join(libraryPath, fn))
 }
+
 ipcMain.handle('load-image-list', async (event, scan)=>{
   if (scan) {
     let allCount = 1
@@ -319,16 +319,17 @@ ipcMain.handle('force-load-image-list', async ()=>{
   sendMessageToWebContents('force loaded success')
   return _.sortedUniq(_.sortBy(folderData.map(f=>f.folder)))
 })
+
 ipcMain.handle('open-local-image', async (event, filepath)=>{
   spawn(setting.imageExplorer, [filepath])
 })
+
 ipcMain.handle('show-file', async (event, filepath)=>{
   shell.showItemInFolder(filepath)
 })
 
 // folder
 ipcMain.handle('search-folder', async(event, folder)=>{
-  console.log(folder)
   let result = await Image.findAll({
     raw: true,
     where: {
@@ -381,12 +382,6 @@ ipcMain.handle('load-setting', async ()=>{
 
 ipcMain.handle('save-setting', async (event, receiveSetting)=>{
   setting = receiveSetting
-  if (setting.proxy) {
-    await session.defaultSession.setProxy({
-      mode: 'fixed_servers',
-      proxyRules: setting.proxy
-    })
-  }
   return await fs.promises.writeFile(path.join(STORE_PATH, 'setting.json'), JSON.stringify(setting, null, '  '), {encoding: 'utf-8'})
 })
 

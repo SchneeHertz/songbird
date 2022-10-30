@@ -448,7 +448,14 @@ onMounted(()=>{
       :show-icon="false"
     >
       <n-button class="action-button" secondary type="primary" @click="scanLibrary(true)">{{$t('ui.manualScan')}}</n-button>
-      <n-button class="action-button" secondary type="warning" @click="forceScanLibrary">{{$t('ui.forceScan')}}</n-button>
+      <n-popconfirm
+        @positive-click="forceScanLibrary"
+      >
+        <template #trigger>
+          <n-button class="action-button" secondary type="warning">{{$t('ui.forceScan')}}</n-button>
+        </template>
+        {{$t('ui.areYouSure')}}
+      </n-popconfirm>
       <n-button-group>
         <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus" @click="getTagForLibrary">{{$t('ui.getTag')}}</n-button>
         <n-tooltip trigger="hover">

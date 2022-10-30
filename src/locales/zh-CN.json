@@ -5,6 +5,7 @@
     "saveTags": "保存tag修改",
     "manualScan": "手动扫描",
     "forceScan": "重建图库",
+    "areYouSure": "你确定吗?",
     "serverUpInfo": "Deepdanbooru服务正常",
     "serverDownInfo": "Deepdanbooru服务异常",
     "getTag": "获取标签",

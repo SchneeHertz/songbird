@@ -20,7 +20,8 @@
 
 ## 使用说明
 1. 在设置窗口选择包含图片的文件夹，点手动扫描
-2. 到 https://github.com/SchneeHertz/deepdanbooru-flask/releases/latest 下载DeepDanbooru-flask服务端，运行，cmd窗口保持开启即可
+2. 到 https://github.com/SchneeHertz/deepdanbooru-flask/releases/latest
+   下载DeepDanbooru-flask服务端，运行，cmd窗口保持开启即可(不需要获取标签时可以关掉)
 3. 在设置窗口等待服务端测试完成，点击获取标签
 4. 顶部搜索栏支持搜索标签和文件路径，左侧可以切换图库
 5. 图片左键打开详情，右键打开关联的外置浏览器
@@ -29,6 +30,7 @@
 1. 内置图片浏览器
 2. 排序
 3. 存档搜索结果
+4. 预设添加Tag列表
 
 ## 爱发电
 https://afdian.net/@SeldonHorizon

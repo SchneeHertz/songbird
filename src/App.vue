@@ -24,25 +24,7 @@ const printMessage = (type, msg) => {
   messageRef.value.message.destroyAll()
   messageRef.value.message[type](msg)
 }
-const sortList = (label)=>{
-  return (a, b)=>{
-    if (a[label] && b[label]) {
-      if (a[label] > b[label]) {
-        return -1
-      } else if (a[label] < b[label]) {
-        return 1
-      } else {
-        return 0
-      }
-    } else if (a[label]) {
-      return -1
-    } else if (b[label]) {
-      return 1
-    } else {
-      return 0
-    }
-  }
-}
+const { locale:i18n, t } = useI18n()
 
 onMounted(()=>{
   ipcRenderer['send-message']((event, arg)=>{
@@ -143,6 +125,20 @@ const clearSearch = ()=>{
   displayImageList.value = []
   onRequestAppend({})
 }
+const order = ref('addTime||DESC')
+const orderOptions = [
+  {label: t('ui.addTimeAsc'), value: 'addTime||ASC'},
+  {label: t('ui.addTimeDesc'), value: 'addTime||DESC'},
+  {label: t('ui.modifyTimeAsc'), value: 'modifyTime||ASC'},
+  {label: t('ui.modifyTimeDesc'), value: 'modifyTime||DESC'},
+  {label: t('ui.filenameAsc'), value: 'filename||ASC'},
+  {label: t('ui.filenameDesc'), value: 'filename||DESC'},
+  {label: t('ui.filesizeAsc'), value: 'filesize||ASC'},
+  {label: t('ui.filesizeDesc'), value: 'filesize||DESC'},
+]
+const handleUpdateOrder = (value)=>{
+  ipcRenderer['search-folder']({folder: _.clone(selectNode.value.folder), order: value})
+}
 
 // folder
 const collapsed = ref(false)
@@ -186,7 +182,7 @@ const nodeProps = ({ option })=>{
     onClick() {
       emptyList()
       selectNode.value = option
-      ipcRenderer['search-folder'](_.cloneDeep(option.folder))
+      ipcRenderer['search-folder']({folder: _.clone(option.folder), order: order.value})
     }
   }
 }
@@ -205,13 +201,13 @@ const testServer = ()=>{
     tagServerStatus.value = false
   })
 }
-let testInterval
+let testInterval = ref(0)
 onMounted(()=>{
   testServer()
-  testInterval = setInterval(testServer, 10000)
+  testInterval.value = setInterval(testServer, 10000)
 })
 onUnmounted(()=>{
-  clearInterval(testInterval)
+  clearInterval(testInterval.value)
 })
 const getTagForLibrary = async ()=>{
   try {
@@ -298,7 +294,6 @@ const languageOption = [
 ]
 const locale = ref({})
 const dateLocale = ref({})
-const { locale:i18n } = useI18n()
 const handleLanguageChange = (val)=>{
   ipcRenderer['get-locale']().then(localeString=>{
     let languageCode
@@ -350,7 +345,7 @@ const refreshThumb = ()=>{
   })
 }
 onMounted(()=>{
-  scanLibrary(false)
+  setTimeout(()=>scanLibrary(false), 1000)
 })
 </script>
 
@@ -383,6 +378,12 @@ onMounted(()=>{
           <n-button class="header-button" type="primary" ghost>
             <template #icon><n-icon><MdArchive /></n-icon></template>
           </n-button>
+          <n-select
+            v-model:value="order"
+            :options="orderOptions"
+            :consistent-menu-width="false"
+            @update:value="handleUpdateOrder"
+          ></n-select>
         </n-space>
       </n-layout-header>
       <n-layout has-sider>

@@ -57,7 +57,6 @@ function createWindow () {
     },
     show: false
   })
-
   if (app.isPackaged) {
     win.loadFile('dist/index.html')
   } else {
@@ -76,7 +75,11 @@ function createWindow () {
 }
 
 app.disableHardwareAcceleration()
-app.whenReady().then(()=>{
+app.whenReady()
+.then(async()=>{
+  return await sequelize.authenticate()
+})
+.then(()=>{
   mainWindow = createWindow()
 })
 app.on('activate', () => {
@@ -137,6 +140,9 @@ const Image = sequelize.define('Image', {
   },
   modifyTime: {
     type: DataTypes.DATE
+  },
+  filesize: {
+    type: DataTypes.FLOAT
   },
   scanTime: {
     type: DataTypes.DATE,
@@ -273,12 +279,14 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
               thumbWidth: 512,
               thumbHeight: Math.floor(512 * height / width)
             }
+            let filestat = await fs.promises.stat(imagePath)
             await Image.create({
               filename: path.basename(imagePath),
               path: imagePath,
               folder: [path.basename(libraryPath), ...subFolder].join('||'),
               library: libraryPath,
-              modifyTime: (await fs.promises.stat(imagePath)).mtime,
+              modifyTime: filestat.mtime,
+              filesize: filestat.size,
               width,
               height,
               ...thumbObj
@@ -356,12 +364,14 @@ ipcMain.handle('force-load-image-list', async ()=>{
           thumbWidth: 512,
           thumbHeight: Math.floor(512 * height / width)
         }
+        let filestat = await fs.promises.stat(imagePath)
         await Image.create({
           filename: path.basename(imagePath),
           path: imagePath,
           folder: [path.basename(libraryPath), ...subFolder].join('||'),
           library: libraryPath,
-          modifyTime: (await fs.promises.stat(imagePath)).mtime,
+          modifyTime: filestat.mtime,
+          filesize: filestat.size,
           width, height,
           ...thumbObj
         })
@@ -398,15 +408,27 @@ ipcMain.handle('show-file', async (event, filepath)=>{
 
 
 // folder
-ipcMain.handle('search-folder', async(event, folder)=>{
-  let result = await Image.findAll({
-    raw: true,
-    where: {
-      folder: {
-        [Op.startsWith]: folder.join('||')
+ipcMain.handle('search-folder', async(event, param)=>{
+  let {folder, order} = param
+  order = order ? order.split('||') : ['addTime', 'DESC']
+  console.log(folder, order)
+  let result
+  if (folder) {
+    result = await Image.findAll({
+      raw: true,
+      order: [order],
+      where: {
+        folder: {
+          [Op.startsWith]: folder.join('||')
+        }
       }
-    }
-  })
+    })
+  } else {
+    result = await Image.findAll({
+      raw: true,
+      order: [order],
+    })
+  }  
   mainWindow.webContents.send('send-image', result)
   sendMessageToWebContents('loaded success')
 })

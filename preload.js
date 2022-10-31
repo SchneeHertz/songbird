@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   'set-progress-bar': (progress)=>ipcRenderer.invoke('set-progress-bar', progress),
   'open-local-image': (filepath)=>ipcRenderer.invoke('open-local-image', filepath),
   'show-file': (filepath)=>ipcRenderer.invoke('show-file', filepath),
-  'search-folder': (folder)=>ipcRenderer.invoke('search-folder', folder),
+  'search-folder': (param)=>ipcRenderer.invoke('search-folder', param),
   'get-locale': ()=>ipcRenderer.invoke('get-locale'),
   'refresh-thumb': ()=>ipcRenderer.invoke('refresh-thumb'),
 })

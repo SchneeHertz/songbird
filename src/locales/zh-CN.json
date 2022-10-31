@@ -1,5 +1,13 @@
 {
   "ui": {
+    "addTimeAsc": "添加时间正序",
+    "addTimeDesc": "添加时间倒序",
+    "modifyTimeAsc": "修改时间正序",
+    "modifyTimeDesc": "修改时间倒序",
+    "filenameAsc": "文件名正序",
+    "filenameDesc": "文件名倒序",
+    "filesizeAsc": "文件大小正序",
+    "filesizeDesc": "文件大小倒序",
     "view": "查看",
     "openLocale": "打开所在位置",
     "saveTags": "保存tag修改",

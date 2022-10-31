@@ -101,6 +101,7 @@ app.on('window-all-closed', () => {
 
 // basic
 ipcMain.handle('set-progress-bar', async(event, progress)=>{
+  console.info(progress)
   mainWindow.setProgressBar(progress)
 })
 
@@ -210,24 +211,28 @@ ipcMain.handle('refresh-thumb', async ()=>{
   let allCount = count
   let nowCount = 0
   for (let imageInd of rows) {
-    let imageHash = createHash('sha1').update(await fs.promises.readFile(imageInd.path)).digest('hex')
-    let thumbPath = path.join(THUMB_PATH, imageHash + '.webp')
     try {
-      await fs.promises.access(thumbPath, fs.constants.R_OK)
-    } catch {
-      let {width, height} = await sharp(imageInd.path).metadata()
-      await sharp(imageInd.path)
-      .resize({width: 512})
-      .toFormat('webp')
-      .toFile(thumbPath)
-      .catch((e)=>{
-        sendMessageToWebContents(`generate thumb from ${imageInd.path} failed because ${e}`)
-        return false
-      })
-      imageInd.thumbPath = thumbPath
-      imageInd.thumbWidth = 512
-      imageInd.thumbHeight = Math.floor(512 * height / width)
-      await imageInd.save()
+      let imageHash = createHash('sha1').update(await fs.promises.readFile(imageInd.path)).digest('hex')
+      let thumbPath = path.join(THUMB_PATH, imageHash + '.webp')
+      try {
+        await fs.promises.access(thumbPath, fs.constants.R_OK)
+      } catch {
+        let {width, height} = await sharp(imageInd.path).metadata()
+        await sharp(imageInd.path)
+        .resize({width: 512})
+        .toFormat('webp')
+        .toFile(thumbPath)
+        .catch((e)=>{
+          sendMessageToWebContents(`generate thumb from ${imageInd.path} failed because ${e}`)
+          return false
+        })
+        imageInd.thumbPath = thumbPath
+        imageInd.thumbWidth = 512
+        imageInd.thumbHeight = Math.floor(512 * height / width)
+        await imageInd.save()
+      }
+    } catch (error) {
+      sendMessageToWebContents(`refresh thumb ${imageInd.path} failed because ${error}`)
     }
     nowCount++
     mainWindow.setProgressBar(nowCount/allCount)
@@ -411,7 +416,6 @@ ipcMain.handle('show-file', async (event, filepath)=>{
 ipcMain.handle('search-folder', async(event, param)=>{
   let {folder, order} = param
   order = order ? order.split('||') : ['addTime', 'DESC']
-  console.log(folder, order)
   let result
   if (folder) {
     result = await Image.findAll({
@@ -428,7 +432,7 @@ ipcMain.handle('search-folder', async(event, param)=>{
       raw: true,
       order: [order],
     })
-  }  
+  }
   mainWindow.webContents.send('send-image', result)
   sendMessageToWebContents('loaded success')
 })

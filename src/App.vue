@@ -125,18 +125,19 @@ const clearSearch = ()=>{
   displayImageList.value = []
   onRequestAppend({})
 }
-const order = ref('addTime||DESC')
+const order = ref('addTime||ASC')
 const orderOptions = [
-  {label: t('ui.addTimeAsc'), value: 'addTime||ASC'},
-  {label: t('ui.addTimeDesc'), value: 'addTime||DESC'},
-  {label: t('ui.modifyTimeAsc'), value: 'modifyTime||ASC'},
-  {label: t('ui.modifyTimeDesc'), value: 'modifyTime||DESC'},
-  {label: t('ui.filenameAsc'), value: 'filename||ASC'},
-  {label: t('ui.filenameDesc'), value: 'filename||DESC'},
-  {label: t('ui.filesizeAsc'), value: 'filesize||ASC'},
-  {label: t('ui.filesizeDesc'), value: 'filesize||DESC'},
+  {label: t('ui.addTimeAsc'), value: 'addTime||DESC'},
+  {label: t('ui.addTimeDesc'), value: 'addTime||ASC'},
+  {label: t('ui.modifyTimeAsc'), value: 'modifyTime||DESC'},
+  {label: t('ui.modifyTimeDesc'), value: 'modifyTime||ASC'},
+  {label: t('ui.filenameAsc'), value: 'filename||DESC'},
+  {label: t('ui.filenameDesc'), value: 'filename||ASC'},
+  {label: t('ui.filesizeAsc'), value: 'filesize||DESC'},
+  {label: t('ui.filesizeDesc'), value: 'filesize||ASC'},
 ]
 const handleUpdateOrder = (value)=>{
+  emptyList()
   ipcRenderer['search-folder']({folder: _.clone(selectNode.value.folder), order: value})
 }
 
@@ -422,9 +423,9 @@ onMounted(()=>{
                 class="waterfall-image"
                 :style="{
                   width: setting.waterfallThumbWidth || 200 + 'px',
-                  height: (setting.waterfallThumbWidth || 200) * item.thumbHeight / item.thumbWidth + 'px'
+                  height: item.thumbPath ? (setting.waterfallThumbWidth || 200) * item.thumbHeight / item.thumbWidth + 'px' : (setting.waterfallThumbWidth || 200) * item.height / item.width + 'px'
                 }"
-                :src="item.thumbPath"
+                :src="item.thumbPath ? item.thumbPath : item.path"
                 @click="openDetail(item)"
                 @contextmenu="openWithExternalViewer(item.path)"
               />
@@ -544,7 +545,7 @@ onMounted(()=>{
           </n-form>
         </n-tab-pane>
         <n-tab-pane name="advanced" :tab="$t('ui.advancedSetting')">
-          <n-button class="action-button" secondary type="primary" @click="refreshThumb">{{$t('ui.refreshThumb')}}</n-button>          
+          <n-button class="action-button" secondary type="primary" @click="refreshThumb">{{$t('ui.refreshThumb')}}</n-button>
           <n-divider style="margin: 4px 0;" />
         </n-tab-pane>
       </n-tabs>

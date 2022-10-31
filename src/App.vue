@@ -150,6 +150,7 @@ const TriggerCollapse = ()=>{
   collapsed.value = !collapsed.value
 }
 const folderTree = ref([])
+const selectNode = ref({})
 const resolveFoldersList = (foldersList)=>{
   // _.reverse(foldersList)
   let folderTreeObject = {}
@@ -184,6 +185,7 @@ const nodeProps = ({ option })=>{
   return {
     onClick() {
       emptyList()
+      selectNode.value = option
       ipcRenderer['search-folder'](_.cloneDeep(option.folder))
     }
   }
@@ -211,7 +213,7 @@ onMounted(()=>{
 onUnmounted(()=>{
   clearInterval(testInterval)
 })
-const getTagForLibrary = ()=>{
+const getTagForLibrary = async ()=>{
   try {
     let threshold = _.inRange(setting.value.deepdanbooruTagScoreThreshold, 0, 1) ? setting.value.deepdanbooruTagScoreThreshold : 0
     let allCount = imageLibrary.value.length
@@ -220,7 +222,7 @@ const getTagForLibrary = ()=>{
       if (_.isEmpty(imageObject.tags)) {
         let fd = new FormData()
         fd.append('filepath', imageObject.path)
-        axios.post('http://localhost:12421/predict', fd)
+        await axios.post('http://localhost:12421/predict', fd)
         .then(res=>{
           let filterResult = _.pickBy(res.data, value=>value>threshold)
           if (_.isEmpty(filterResult)) {
@@ -340,6 +342,13 @@ const forceScanLibrary = ()=>{
   ipcRenderer['force-load-image-list']()
   .then(res=>resolveFoldersList(res))
 }
+const refreshThumb = ()=>{
+  ipcRenderer['refresh-thumb']()
+  .then(()=>{
+    emptyList()
+    scanLibrary(false)
+  })
+}
 onMounted(()=>{
   scanLibrary(false)
 })
@@ -412,9 +421,9 @@ onMounted(()=>{
                 class="waterfall-image"
                 :style="{
                   width: setting.waterfallThumbWidth || 200 + 'px',
-                  height: (setting.waterfallThumbWidth || 200) * item.height / item.width + 'px'
+                  height: (setting.waterfallThumbWidth || 200) * item.thumbHeight / item.thumbWidth + 'px'
                 }"
-                :src="item.path"
+                :src="item.thumbPath"
                 @click="openDetail(item)"
                 @contextmenu="openWithExternalViewer(item.path)"
               />
@@ -447,91 +456,100 @@ onMounted(()=>{
       style="width: 50vw"
       :show-icon="false"
     >
-      <n-button class="action-button" secondary type="primary" @click="scanLibrary(true)">{{$t('ui.manualScan')}}</n-button>
-      <n-popconfirm
-        @positive-click="forceScanLibrary"
-      >
-        <template #trigger>
-          <n-button class="action-button" secondary type="warning">{{$t('ui.forceScan')}}</n-button>
-        </template>
-        {{$t('ui.areYouSure')}}
-      </n-popconfirm>
-      <n-button-group>
-        <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus" @click="getTagForLibrary">{{$t('ui.getTag')}}</n-button>
-        <n-tooltip trigger="hover">
-        <template #trigger>
-          <n-button class="action-button" secondary :type="tagServerStatus ? 'primary' : 'error'" disabled tag="div">
-            <template #icon><n-icon>
-              <MdCheckmarkCircleOutline v-if="tagServerStatus" />
-              <MdCloseCircleOutline v-else />
-            </n-icon></template>
-          </n-button>
-        </template>
-        {{tagServerStatus ? $t('ui.serverUpInfo') : $t('ui.serverDownInfo')}}
-      </n-tooltip>
-      </n-button-group>
-      <n-divider />
-      <n-form :model="setting">
-        <n-form-item path="library" :label="$t('ui.library')">
-          <n-dynamic-input
-            v-model:value="setting.library"
-            @create="addLibraryPath"
-            @remove="saveSetting"
+      <n-tabs type="line" animated default-value="default">
+        <n-tab-pane name="default" :tab="$t('ui.defaultSetting')">
+          <n-button class="action-button" secondary type="primary" @click="scanLibrary(true)">{{$t('ui.manualScan')}}</n-button>
+          <n-popconfirm
+            @positive-click="forceScanLibrary"
           >
-            <template #create-button-default>
-              {{$t('ui.addLibraryPath')}}
+            <template #trigger>
+              <n-button class="action-button" secondary type="warning">{{$t('ui.forceScan')}}</n-button>
             </template>
-          </n-dynamic-input>
-        </n-form-item>
-        <n-form-item path="imageExplorer" :label="$t('ui.imageExplorer')">
-          <n-input-group>
-            <n-input
-              v-model:value="setting.imageExplorer"
-            ></n-input>
-            <n-button type="primary" ghost @click="handleChooseImageExplorer">
-              <template #icon><n-icon><MdOpen /></n-icon></template>
-            </n-button>
-          </n-input-group>
-        </n-form-item>
-        <n-form-item path="language" :label="$t('ui.language')">
-          <n-select
-            v-model:value="setting.language"
-            :options="languageOption"
-            @update:value="handleLanguageChange(setting.language)"
-          ></n-select>
-        </n-form-item>
-      </n-form>
-      <n-form inline :model="setting" >
-        <n-form-item path="deepdanbooruTagScoreThreshold" :label="$t('ui.deepdanbooruTagScoreThreshold')">
-          <n-input-number
-            v-model:value="setting.deepdanbooruTagScoreThreshold"
-            :clearable="false"
-            :max="1"
-            :min="0"
-            :precision="2"
-            :step="0.1"
-            @update:value="saveSetting"
-          ></n-input-number>
-        </n-form-item>
-        <n-form-item path="waterfallGap" :label="$t('ui.waterfallGap')">
-          <n-input-number
-            v-model:value="setting.waterfallGap"
-            :clearable="false"
-            :min="1"
-            @update:value="saveSetting"
-          ></n-input-number>
-        </n-form-item>
-        <n-form-item path="waterfallThumbWidth" :label="$t('ui.waterfallThumbWidth')">
-          <n-input-number
-            v-model:value="setting.waterfallThumbWidth"
-            :clearable="false"
-            :min="100"
-            @update:value="saveSetting"
-          ></n-input-number>
-        </n-form-item>
-      </n-form>
+            {{$t('ui.areYouSure')}}
+          </n-popconfirm>
+          <n-button-group>
+            <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus" @click="getTagForLibrary">{{$t('ui.getTag')}}</n-button>
+            <n-tooltip trigger="hover">
+            <template #trigger>
+              <n-button class="action-button" secondary :type="tagServerStatus ? 'primary' : 'error'" disabled tag="div">
+                <template #icon><n-icon>
+                  <MdCheckmarkCircleOutline v-if="tagServerStatus" />
+                  <MdCloseCircleOutline v-else />
+                </n-icon></template>
+              </n-button>
+            </template>
+            {{tagServerStatus ? $t('ui.serverUpInfo') : $t('ui.serverDownInfo')}}
+          </n-tooltip>
+          </n-button-group>
+          <n-divider style="margin: 4px 0;" />
+          <n-form :model="setting">
+            <n-form-item path="library" :label="$t('ui.library')">
+              <n-dynamic-input
+                v-model:value="setting.library"
+                @create="addLibraryPath"
+                @remove="saveSetting"
+              >
+                <template #create-button-default>
+                  {{$t('ui.addLibraryPath')}}
+                </template>
+              </n-dynamic-input>
+            </n-form-item>
+            <n-form-item path="imageExplorer" :label="$t('ui.imageExplorer')">
+              <n-input-group>
+                <n-input
+                  v-model:value="setting.imageExplorer"
+                ></n-input>
+                <n-button type="primary" ghost @click="handleChooseImageExplorer">
+                  <template #icon><n-icon><MdOpen /></n-icon></template>
+                </n-button>
+              </n-input-group>
+            </n-form-item>
+            <n-form-item path="language" :label="$t('ui.language')">
+              <n-select
+                v-model:value="setting.language"
+                :options="languageOption"
+                @update:value="handleLanguageChange(setting.language)"
+              ></n-select>
+            </n-form-item>
+          </n-form>
+          <n-form inline :model="setting" >
+            <n-form-item path="deepdanbooruTagScoreThreshold" :label="$t('ui.deepdanbooruTagScoreThreshold')">
+              <n-input-number
+                v-model:value="setting.deepdanbooruTagScoreThreshold"
+                :clearable="false"
+                :max="1"
+                :min="0"
+                :precision="2"
+                :step="0.1"
+                @update:value="saveSetting"
+              ></n-input-number>
+            </n-form-item>
+            <n-form-item path="waterfallGap" :label="$t('ui.waterfallGap')">
+              <n-input-number
+                v-model:value="setting.waterfallGap"
+                :clearable="false"
+                :min="1"
+                @update:value="saveSetting"
+              ></n-input-number>
+            </n-form-item>
+            <n-form-item path="waterfallThumbWidth" :label="$t('ui.waterfallThumbWidth')">
+              <n-input-number
+                v-model:value="setting.waterfallThumbWidth"
+                :clearable="false"
+                :min="100"
+                @update:value="saveSetting"
+              ></n-input-number>
+            </n-form-item>
+          </n-form>
+        </n-tab-pane>
+        <n-tab-pane name="advanced" :tab="$t('ui.advancedSetting')">
+          <n-button class="action-button" secondary type="primary" @click="refreshThumb">{{$t('ui.refreshThumb')}}</n-button>          
+          <n-divider style="margin: 4px 0;" />
+        </n-tab-pane>
+      </n-tabs>
       <template #action>
         <n-button type="success" @click="saveSetting">{{$t('ui.save')}}</n-button>
+        <n-button type="info" @click="showSettingModel = false">{{$t('ui.close')}}</n-button>
       </template>
     </n-modal>
     <n-message-provider>

@@ -4,15 +4,18 @@ const fs = require('fs')
 const process = require('process')
 const { spawn } = require('child_process')
 const { promisify, format } = require('util')
+const { createHash } = require('crypto')
 const _ = require('lodash')
 const sharp = require('sharp')
 const glob = require('glob')
 const { Sequelize, DataTypes, Op } = require('sequelize')
 
-let STORE_PATH = app.getPath('userData')
-if (!fs.existsSync(STORE_PATH)) {
+const STORE_PATH = app.getPath('userData')
+const THUMB_PATH = path.join(STORE_PATH, 'thumb')
+try {
   fs.mkdirSync(STORE_PATH)
-}
+  fs.mkdirSync(THUMB_PATH)
+} catch (err) {}
 
 let setting
 try {
@@ -92,10 +95,12 @@ app.on('window-all-closed', () => {
   }
 })
 
+
 // basic
 ipcMain.handle('set-progress-bar', async(event, progress)=>{
   mainWindow.setProgressBar(progress)
 })
+
 
 //database
 const sequelize = new Sequelize({
@@ -167,6 +172,7 @@ const Image = sequelize.define('Image', {
   await Image.sync({ alter: true })
 })()
 
+
 // library
 const getImageList = async (libraryPath)=>{
   let imageList = await promisify(glob)('**/*.@(jpg|jpeg|png|gif|webp|avif)', {
@@ -176,9 +182,57 @@ const getImageList = async (libraryPath)=>{
   return imageList.map(fn=>path.join(libraryPath, fn))
 }
 
+const createThumb = async (imagePath)=>{
+  let imageHash = createHash('sha1').update(await fs.promises.readFile(imagePath)).digest('hex')
+  let thumbPath = path.join(THUMB_PATH, imageHash + '.webp')
+  await sharp(imagePath)
+  .resize({width: 512})
+  .toFormat('webp')
+  .toFile(thumbPath)
+  .catch((e)=>{
+    sendMessageToWebContents(`generate cover from ${filepath} failed because ${e}`)
+    return false
+  })
+  return thumbPath
+}
+
+ipcMain.handle('refresh-thumb', async ()=>{
+  try {
+    fs.mkdirSync(THUMB_PATH)
+  } catch (err) {}
+  let { count, rows } = await Image.findAndCountAll()
+  let allCount = count
+  let nowCount = 0
+  for (let imageInd of rows) {
+    let imageHash = createHash('sha1').update(await fs.promises.readFile(imageInd.path)).digest('hex')
+    let thumbPath = path.join(THUMB_PATH, imageHash + '.webp')
+    try {
+      await fs.promises.access(thumbPath, fs.constants.R_OK)
+    } catch {
+      let {width, height} = await sharp(imageInd.path).metadata()
+      await sharp(imageInd.path)
+      .resize({width: 512})
+      .toFormat('webp')
+      .toFile(thumbPath)
+      .catch((e)=>{
+        sendMessageToWebContents(`generate thumb from ${imageInd.path} failed because ${e}`)
+        return false
+      })
+      imageInd.thumbPath = thumbPath
+      imageInd.thumbWidth = 512
+      imageInd.thumbHeight = Math.floor(512 * height / width)
+      await imageInd.save()
+    }
+    nowCount++
+    mainWindow.setProgressBar(nowCount/allCount)
+  }
+  mainWindow.setProgressBar(-1)
+  return
+})
+
 ipcMain.handle('load-image-list', async (event, scan)=>{
   if (scan) {
-    let allCount = 1
+    let allCount = 0
     let nowCount = 0
     let dateStartScan = new Date()
     let libraryArray = []
@@ -213,18 +267,25 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
               subFolder = subFolder.split(path.sep)
             }
             let {width, height} = await sharp(imagePath).metadata()
+            let thumbPath = await createThumb(imagePath)
+            let thumbObj = {
+              thumbPath,
+              thumbWidth: 512,
+              thumbHeight: Math.floor(512 * height / width)
+            }
             await Image.create({
               filename: path.basename(imagePath),
               path: imagePath,
               folder: [path.basename(libraryPath), ...subFolder].join('||'),
               library: libraryPath,
-              modifyTime: fs.statSync(imagePath).mtime,
+              modifyTime: (await fs.promises.stat(imagePath)).mtime,
               width,
-              height
+              height,
+              ...thumbObj
             })
           }
-          nowCount += 1
-          if (nowCount % 100 === 0) mainWindow.setProgressBar(nowCount/allCount)
+          nowCount++
+          mainWindow.setProgressBar(nowCount/allCount)
         }
         let scanResult = await Image.findAll({
           raw: true,
@@ -264,7 +325,7 @@ ipcMain.handle('force-load-image-list', async ()=>{
   Image.destroy({
     truncate: true
   })
-  let allCount = 1
+  let allCount = 0
   let nowCount = 0
   let libraryArray = []
   for (let libraryPath of setting.library) {
@@ -289,16 +350,23 @@ ipcMain.handle('force-load-image-list', async ()=>{
           subFolder = subFolder.split(path.sep)
         }
         let {width, height} = await sharp(imagePath).metadata()
+        let thumbPath = await createThumb(imagePath)
+        let thumbObj = {
+          thumbPath,
+          thumbWidth: 512,
+          thumbHeight: Math.floor(512 * height / width)
+        }
         await Image.create({
           filename: path.basename(imagePath),
           path: imagePath,
           folder: [path.basename(libraryPath), ...subFolder].join('||'),
           library: libraryPath,
-          modifyTime: fs.statSync(imagePath).mtime,
-          width, height
+          modifyTime: (await fs.promises.stat(imagePath)).mtime,
+          width, height,
+          ...thumbObj
         })
-        nowCount += 1
-        if (nowCount % 100 === 0) mainWindow.setProgressBar(nowCount/allCount)
+        nowCount++
+        mainWindow.setProgressBar(nowCount/allCount)
       }
       let scanResult = await Image.findAll({
         raw: true,
@@ -328,6 +396,7 @@ ipcMain.handle('show-file', async (event, filepath)=>{
   shell.showItemInFolder(filepath)
 })
 
+
 // folder
 ipcMain.handle('search-folder', async(event, folder)=>{
   let result = await Image.findAll({
@@ -353,6 +422,7 @@ ipcMain.handle('update-image', async (event, imageObject)=>{
   })
 })
 
+
 // setting
 ipcMain.handle('select-folder', async ()=>{
   let result = await dialog.showOpenDialog(mainWindow, {
@@ -377,7 +447,7 @@ ipcMain.handle('select-file', async ()=>{
 })
 
 ipcMain.handle('load-setting', async ()=>{
-  return JSON.parse(fs.readFileSync(path.join(STORE_PATH, 'setting.json'), {encoding: 'utf-8'}))
+  return JSON.parse(await fs.promises.readFile(path.join(STORE_PATH, 'setting.json'), {encoding: 'utf-8'}))
 })
 
 ipcMain.handle('save-setting', async (event, receiveSetting)=>{

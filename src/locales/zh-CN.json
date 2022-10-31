@@ -3,6 +3,8 @@
     "view": "查看",
     "openLocale": "打开所在位置",
     "saveTags": "保存tag修改",
+    "defaultSetting": "常用",
+    "advancedSetting": "高级",
     "manualScan": "手动扫描",
     "forceScan": "重建图库",
     "areYouSure": "你确定吗?",
@@ -17,7 +19,9 @@
     "deepdanbooruTagScoreThreshold": "Deepdanbooru分数阈值",
     "waterfallGap": "瀑布流横向间距",
     "waterfallThumbWidth": "瀑布流图片宽度",
-    "save": "保存"
+    "refreshThumb": "刷新缩略图",
+    "save": "保存",
+    "close": "关闭"
   },
   "message": {
 

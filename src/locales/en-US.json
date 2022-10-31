@@ -3,6 +3,8 @@
     "view": "view",
     "openLocale": "Open Locale",
     "saveTags": "Save Tag",
+    "defaultSetting": "Default",
+    "advancedSetting": "Advanced",
     "manualScan": "Manual Scan",
     "forceScan": "Rebuild Library",
     "areYouSure": "Are you sure?",
@@ -17,7 +19,9 @@
     "deepdanbooruTagScoreThreshold": "Deepdanbooru Threshold",
     "waterfallGap": "Waterfall Gap",
     "waterfallThumbWidth": "Waterfall Thumb Width",
-    "save": "Save"
+    "refreshThumb": "Refresh Thumb",
+    "save": "Save",
+    "close": "Close"
   },
   "message": {
 

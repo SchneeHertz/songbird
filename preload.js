@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   'show-file': (filepath)=>ipcRenderer.invoke('show-file', filepath),
   'search-folder': (folder)=>ipcRenderer.invoke('search-folder', folder),
   'get-locale': ()=>ipcRenderer.invoke('get-locale'),
+  'refresh-thumb': ()=>ipcRenderer.invoke('refresh-thumb'),
 })

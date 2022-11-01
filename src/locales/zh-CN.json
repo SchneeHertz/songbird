@@ -11,6 +11,7 @@
     "view": "查看",
     "openLocale": "打开所在位置",
     "saveTags": "保存tag修改",
+    "setting": "设置",
     "defaultSetting": "常用",
     "advancedSetting": "高级",
     "manualScan": "手动扫描",
@@ -19,7 +20,9 @@
     "serverUpInfo": "Deepdanbooru服务正常",
     "serverDownInfo": "Deepdanbooru服务异常",
     "getTag": "获取标签",
-    "setting": "设置",
+    "tagFrom": "标签来自:",
+    "txtFile": "txt文件",
+    "filename": "文件名",
     "library": "图库",
     "addLibraryPath": "添加图库位置",
     "imageExplorer": "外置浏览器",
@@ -32,6 +35,6 @@
     "close": "关闭"
   },
   "message": {
-
+    "startGetTag": "开始获取标签"
   }
 }

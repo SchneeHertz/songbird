@@ -3,6 +3,7 @@
     "view": "view",
     "openLocale": "Open Locale",
     "saveTags": "Save Tag",
+    "setting": "Setting",
     "defaultSetting": "Default",
     "advancedSetting": "Advanced",
     "manualScan": "Manual Scan",
@@ -11,7 +12,9 @@
     "serverUpInfo": "Deepdanbooru server ready",
     "serverDownInfo": "Deepdanbooru server error",
     "getTag": "Get Tag",
-    "setting": "Setting",
+    "tagFrom": "Tag from:",
+    "txtFile": "txt file",
+    "filename": "Filename",
     "library": "Librarys",
     "addLibraryPath": "Add Library Path",
     "imageExplorer": "External Viewer",
@@ -24,6 +27,6 @@
     "close": "Close"
   },
   "message": {
-
+    "startGetTag": "Start getting Tags"
   }
 }

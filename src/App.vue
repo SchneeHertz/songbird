@@ -210,31 +210,46 @@ onMounted(()=>{
 onUnmounted(()=>{
   clearInterval(testInterval.value)
 })
-const getTagForLibrary = async ()=>{
+const fromDeepdanbooru = ref(true)
+const fromTxtFile = ref(false)
+const fromFilename = ref(false)
+const forceGetTagForLibrary = ()=>{
+  getTagForLibrary(true)
+}
+const getTagForLibrary = async (force)=>{
+  printMessage('info', t('message.startGetTag'))
   try {
     let threshold = _.inRange(setting.value.deepdanbooruTagScoreThreshold, 0, 1) ? setting.value.deepdanbooruTagScoreThreshold : 0
     let allCount = imageLibrary.value.length
     let nowCount = 0
     for (let imageObject of imageLibrary.value) {
-      if (_.isEmpty(imageObject.tags)) {
-        let fd = new FormData()
-        fd.append('filepath', imageObject.path)
-        await axios.post('http://localhost:12421/predict', fd)
-        .then(res=>{
-          let filterResult = _.pickBy(res.data, value=>value>threshold)
-          if (_.isEmpty(filterResult)) {
-            imageObject.tags = ['not_match']
-          } else {
-            imageObject.tags = _.keys(filterResult)
-          }
-          ipcRenderer['update-image'](_.cloneDeep(imageObject))
-          nowCount++
-          ipcRenderer['set-progress-bar'](nowCount/allCount)
-          if (nowCount === allCount) {
-            ipcRenderer['set-progress-bar'](-1)
-            printMessage('success', 'Get Tags Complete')
-          }
-        })
+      if (force || _.isEmpty(imageObject.tags)) {
+        let tags = []
+        if (fromDeepdanbooru.value) {
+          let fd = new FormData()
+          fd.append('filepath', imageObject.path)
+          let ddbrTags = await axios.post('http://localhost:12421/predict', fd)
+          let filterResult = _.pickBy(ddbrTags.data, value=>value>threshold)
+          tags = tags.concat(_.keys(filterResult))
+        }
+        if (fromTxtFile.value) {
+
+        }
+        if (fromFilename.value) {
+
+        }
+        if (_.isEmpty(tags)) {
+          imageObject.tags = ['not_matched']
+        } else {
+          imageObject.tags = tags
+        }
+        ipcRenderer['update-image'](_.cloneDeep(imageObject))
+        nowCount++
+        ipcRenderer['set-progress-bar'](nowCount/allCount)
+        if (nowCount === allCount) {
+          ipcRenderer['set-progress-bar'](-1)
+          printMessage('success', 'Get Tags Complete')
+        }
       } else {
         nowCount++
       }
@@ -469,20 +484,42 @@ onMounted(()=>{
             </template>
             {{$t('ui.areYouSure')}}
           </n-popconfirm>
-          <n-button-group>
-            <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus" @click="getTagForLibrary">{{$t('ui.getTag')}}</n-button>
-            <n-tooltip trigger="hover">
+          <n-popconfirm
+            @negative-click="forceGetTagForLibrary"
+            @positive-click="getTagForLibrary"
+            :show-icon="false"
+          >
             <template #trigger>
-              <n-button class="action-button" secondary :type="tagServerStatus ? 'primary' : 'error'" disabled tag="div">
-                <template #icon><n-icon>
-                  <MdCheckmarkCircleOutline v-if="tagServerStatus" />
-                  <MdCloseCircleOutline v-else />
-                </n-icon></template>
-              </n-button>
+              <n-button-group>
+                <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus">{{$t('ui.getTag')}}</n-button>
+                <n-tooltip trigger="hover">
+                  <template #trigger>
+                    <n-button class="action-button" secondary :type="tagServerStatus ? 'primary' : 'error'" disabled tag="div">
+                      <template #icon><n-icon>
+                        <MdCheckmarkCircleOutline v-if="tagServerStatus" />
+                        <MdCloseCircleOutline v-else />
+                      </n-icon></template>
+                    </n-button>
+                  </template>
+                  {{tagServerStatus ? $t('ui.serverUpInfo') : $t('ui.serverDownInfo')}}
+                </n-tooltip>
+              </n-button-group>
             </template>
-            {{tagServerStatus ? $t('ui.serverUpInfo') : $t('ui.serverDownInfo')}}
-          </n-tooltip>
-          </n-button-group>
+              <n-form-item :label="$t('ui.tagFrom')" :show-feedback="false">
+                <n-switch class="popover-switch" v-model:value="fromDeepdanbooru">
+                  <template #checked>Deepdanbooru</template>
+                  <template #unchecked>Deepdanbooru</template>
+                </n-switch>
+                <n-switch class="popover-switch" v-model:value="fromTxtFile">
+                  <template #checked>{{$t('ui.txtFile')}}</template>
+                  <template #unchecked>{{$t('ui.txtFile')}}</template>
+                </n-switch>
+                <n-switch class="popover-switch" v-model:value="fromFilename">
+                  <template #checked>{{$t('ui.filename')}}</template>
+                  <template #unchecked>{{$t('ui.filename')}}</template>
+                </n-switch>
+              </n-form-item>
+          </n-popconfirm>
           <n-divider style="margin: 4px 0;" />
           <n-form :model="setting">
             <n-form-item path="library" :label="$t('ui.library')">
@@ -581,5 +618,7 @@ body
     margin: 4px
 
 .action-button
+  margin-right: 4px
+.popover-switch
   margin-right: 4px
 </style>

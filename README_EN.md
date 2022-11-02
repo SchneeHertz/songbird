@@ -7,6 +7,7 @@ A tag-based image management software
 
 ![home.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/home.jpg)
 ![tags.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/tags.jpg)
+![internalViewer.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/internalViewer.jpg)
 
 ## Features
 1. tagging images with multiple tags

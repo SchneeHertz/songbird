@@ -7,6 +7,7 @@
 
 ![home.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/home.jpg)
 ![tags.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/tags.jpg)
+![internalViewer.jpg](https://raw.githubusercontent.com/SchneeHertz/songbird/master/screenshots/internalViewer.jpg)
 
 ## 功能
 1. 给图片打多个标签

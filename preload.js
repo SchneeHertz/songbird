@@ -16,4 +16,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   'search-folder': (param)=>ipcRenderer.invoke('search-folder', param),
   'get-locale': ()=>ipcRenderer.invoke('get-locale'),
   'refresh-thumb': ()=>ipcRenderer.invoke('refresh-thumb'),
+  'get-crawler-list': ()=>ipcRenderer.invoke('get-crawler-list'),
+  'get-tag-by-crawler': (param)=>ipcRenderer.invoke('get-tag-by-crawler', param),
+  'open-tag-crawler-path': ()=>ipcRenderer.invoke('open-tag-crawler-path'),
 })

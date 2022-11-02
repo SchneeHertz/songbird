@@ -18,6 +18,15 @@
       "index.js",
       "preload.js"
     ],
+    "extraResources": [
+      {
+        "from": "resources/tag-crawler",
+        "to": "tag-crawler",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "win": {
       "target": [
         "nsis"

@@ -5,6 +5,10 @@ import {
   MdSettings,
   MdArchive,
   MdOpen,
+  MdClose,
+  MdSkipForward,
+  MdSkipBackward,
+  MdShuffle,
   MdCheckmarkCircleOutline,
   MdCloseCircleOutline,
   MdFolderOpen,
@@ -54,11 +58,14 @@ onMounted(()=>{
 })
 const cacheImageList = ref([])
 const displayImageList = ref([])
+const resultImageList = computed(()=>{
+  return displayImageList.value.concat(cacheImageList.value)
+})
 const onRequestAppend = (e)=>{
   let groupKey = (e.groupKey || 0) + 1
   for (let i=1; i<=20; i++) {
     if (!_.isEmpty(cacheImageList.value)) {
-      let item = cacheImageList.value.pop()
+      let item = cacheImageList.value.shift()
       item.groupKey = groupKey
       displayImageList.value.push(item)
     }
@@ -104,6 +111,12 @@ const openImageLocale = (path)=>{
 const reloadPage = ()=>{
   window.location.reload()
 }
+const predefinedTagList = computed(()=>{
+  return _.trim(setting.value.predefinedTagList).split(/\s*(?:[,，]|$)\s*/).map(t=>({label:t,value:t}))
+})
+const concatedTags = computed(()=>{
+  return tags.concat(predefinedTagList)
+})
 const searchString = ref([])
 const handleSearch = ()=>{
   if (_.isEmpty(searchString)) {
@@ -125,16 +138,16 @@ const clearSearch = ()=>{
   displayImageList.value = []
   onRequestAppend({})
 }
-const order = ref('addTime||ASC')
+const order = ref('addTime||DESC')
 const orderOptions = [
-  {label: t('ui.addTimeAsc'), value: 'addTime||DESC'},
-  {label: t('ui.addTimeDesc'), value: 'addTime||ASC'},
-  {label: t('ui.modifyTimeAsc'), value: 'modifyTime||DESC'},
-  {label: t('ui.modifyTimeDesc'), value: 'modifyTime||ASC'},
-  {label: t('ui.filenameAsc'), value: 'filename||DESC'},
-  {label: t('ui.filenameDesc'), value: 'filename||ASC'},
-  {label: t('ui.filesizeAsc'), value: 'filesize||DESC'},
-  {label: t('ui.filesizeDesc'), value: 'filesize||ASC'},
+  {label: t('ui.addTimeAsc'), value: 'addTime||ASC'},
+  {label: t('ui.addTimeDesc'), value: 'addTime||DESC'},
+  {label: t('ui.modifyTimeAsc'), value: 'modifyTime||ASC'},
+  {label: t('ui.modifyTimeDesc'), value: 'modifyTime||DESC'},
+  {label: t('ui.filenameAsc'), value: 'filename||ASC'},
+  {label: t('ui.filenameDesc'), value: 'filename||DESC'},
+  {label: t('ui.filesizeAsc'), value: 'filesize||ASC'},
+  {label: t('ui.filesizeDesc'), value: 'filesize||DESC'},
 ]
 const handleUpdateOrder = (value)=>{
   emptyList()
@@ -191,6 +204,9 @@ const nodeProps = ({ option })=>{
 
 // tag
 const tagServerStatus = ref(false)
+const fromDeepdanbooru = ref(true)
+const fromTagSource = ref([])
+const testInterval = ref(0)
 const testServer = ()=>{
   axios.get('http://localhost:12421/test')
   .then(res=>{
@@ -200,21 +216,23 @@ const testServer = ()=>{
   })
   .catch(error=>{
     tagServerStatus.value = false
+    fromDeepdanbooru.value = false
   })
 }
-let testInterval = ref(0)
-onMounted(()=>{
+onMounted(async ()=>{
+  let crawlerList = await ipcRenderer['get-crawler-list']()  
+  fromTagSource.value = crawlerList.map(label=>({label, value: false}))
   testServer()
   testInterval.value = setInterval(testServer, 10000)
 })
 onUnmounted(()=>{
   clearInterval(testInterval.value)
 })
-const fromDeepdanbooru = ref(true)
-const fromTxtFile = ref(false)
-const fromFilename = ref(false)
 const forceGetTagForLibrary = ()=>{
   getTagForLibrary(true)
+}
+const test = async ()=>{
+  showViewerDrawer.value = true
 }
 const getTagForLibrary = async (force)=>{
   printMessage('info', t('message.startGetTag'))
@@ -223,34 +241,42 @@ const getTagForLibrary = async (force)=>{
     let allCount = imageLibrary.value.length
     let nowCount = 0
     for (let imageObject of imageLibrary.value) {
-      if (force || _.isEmpty(imageObject.tags)) {
-        let tags = []
-        if (fromDeepdanbooru.value) {
-          let fd = new FormData()
-          fd.append('filepath', imageObject.path)
-          let ddbrTags = await axios.post('http://localhost:12421/predict', fd)
-          let filterResult = _.pickBy(ddbrTags.data, value=>value>threshold)
-          tags = tags.concat(_.keys(filterResult))
-        }
-        if (fromTxtFile.value) {
-
-        }
-        if (fromFilename.value) {
-
-        }
-        if (_.isEmpty(tags)) {
-          imageObject.tags = ['not_matched']
+      try {
+        if (force || _.isEmpty(imageObject.tags)) {
+          let tags = []
+          if (fromDeepdanbooru.value) {
+            let fd = new FormData()
+            fd.append('filepath', imageObject.path)
+            let ddbrTags = await axios.post('http://localhost:12421/predict', fd)
+            let filterResult = _.pickBy(ddbrTags.data, value=>value>threshold)
+            tags = tags.concat(_.keys(filterResult))
+          }
+          for (let crawler of fromTagSource.value) {
+            if (crawler.value) {
+              tags = tags.concat(await ipcRenderer['get-tag-by-crawler']({
+                crawlerName: crawler.label,
+                filepath: imageObject.path
+              }))
+            }
+          }
+          tags = _.compact(tags)
+          if (_.isEmpty(tags)) {
+            imageObject.tags = ['not_matched']
+          } else {
+            imageObject.tags = tags
+          }
+          ipcRenderer['update-image'](_.cloneDeep(imageObject))
+          nowCount++
+          ipcRenderer['set-progress-bar'](nowCount/allCount)
+          if (nowCount >= allCount) {
+            ipcRenderer['set-progress-bar'](-1)
+            printMessage('success', 'Get Tags Complete')
+          }
         } else {
-          imageObject.tags = tags
+          nowCount++
         }
-        ipcRenderer['update-image'](_.cloneDeep(imageObject))
-        nowCount++
-        ipcRenderer['set-progress-bar'](nowCount/allCount)
-        if (nowCount === allCount) {
-          ipcRenderer['set-progress-bar'](-1)
-          printMessage('success', 'Get Tags Complete')
-        }
-      } else {
+      } catch (error) {
+        console.log(error)
         nowCount++
       }
     }
@@ -261,6 +287,14 @@ const getTagForLibrary = async (force)=>{
   }
 }
 
+// viewer
+const showViewerDrawer = ref(false)
+const viewImageIndex = ref(0)
+const viewImage = (index)=>{
+  console.log(index)
+  viewImageIndex.value = index
+  showViewerDrawer.value = true
+}
 
 //setting
 const showSettingModel = ref(false)
@@ -360,6 +394,9 @@ const refreshThumb = ()=>{
     scanLibrary(false)
   })
 }
+const openTagCrawlerPath = ()=>{
+  ipcRenderer['open-tag-crawler-path']()
+}
 onMounted(()=>{
   setTimeout(()=>scanLibrary(false), 1000)
 })
@@ -381,7 +418,7 @@ onMounted(()=>{
               clearable
               tag
               max-tag-count="responsive"
-              :options="tags"
+              :options="concatedTags"
               @clear="clearSearch"
               ></n-select>
             <n-button type="primary" ghost @click="handleSearch">
@@ -391,7 +428,7 @@ onMounted(()=>{
           <n-button class="header-button" type="primary" ghost @click="showSettingModel = true">
             <template #icon><n-icon><MdSettings /></n-icon></template>
           </n-button>
-          <n-button class="header-button" type="primary" ghost>
+          <n-button class="header-button" type="primary" ghost @click="test">
             <template #icon><n-icon><MdArchive /></n-icon></template>
           </n-button>
           <n-select
@@ -430,7 +467,7 @@ onMounted(()=>{
           >
             <div
               class="item"
-              v-for="item in displayImageList"
+              v-for="(item, index) in displayImageList"
               :key="item.id"
               :data-grid-groupkey="item.groupKey"
             >
@@ -442,7 +479,7 @@ onMounted(()=>{
                 }"
                 :src="item.thumbPath ? item.thumbPath : item.path"
                 @click="openDetail(item)"
-                @contextmenu="openWithExternalViewer(item.path)"
+                @contextmenu="viewImage(index)"
               />
             </div>
           </masonry-infinite-grid>
@@ -463,8 +500,50 @@ onMounted(()=>{
           v-model:value="imageDetail.tags"
           size="small"
           :render-tag="renderTag"
-        />
+        >
+        <template #input="{ submit, deactivate }">
+          <n-select
+            size="tiny"
+            filterable
+            tag
+            :options="predefinedTagList"
+            @update:value="(v)=>{submit(v);deactivate()}"
+          ></n-select>
+        </template>
+        </n-dynamic-tags>
       </n-drawer-content>
+    </n-drawer>
+    <n-drawer
+      v-model:show="showViewerDrawer"
+      placement="bottom"
+      height="100%"
+      class="viewer-drawer"
+    >
+      <div class="viewer-image-frame">
+        <n-button
+          class="view-close-button"
+          text
+          @click="showViewerDrawer = false"
+        ><n-icon><MdClose /></n-icon></n-button>
+        <img
+          class="viewer-image"
+          :src="resultImageList[viewImageIndex].path"
+        />
+      </div>
+      <n-space justify="center">
+        <n-button
+          class="view-action-button"
+          text
+        ><n-icon><MdSkipBackward /></n-icon></n-button>
+        <n-button
+          class="view-action-button"
+          text
+        ><n-icon><MdSkipForward /></n-icon></n-button>
+        <n-button
+          class="view-action-button"
+          text
+        ><n-icon><MdShuffle /></n-icon></n-button>
+      </n-space>
     </n-drawer>
     <n-modal
       v-model:show="showSettingModel"
@@ -486,12 +565,15 @@ onMounted(()=>{
           </n-popconfirm>
           <n-popconfirm
             @negative-click="forceGetTagForLibrary"
+            :negative-text="$t('ui.forceGetTag')"
+            :negative-button-props="{type: 'warning'}"
             @positive-click="getTagForLibrary"
+            :positive-text="$t('ui.getTag')"
             :show-icon="false"
           >
             <template #trigger>
               <n-button-group>
-                <n-button class="action-button" secondary type="primary" :disabled="!tagServerStatus">{{$t('ui.getTag')}}</n-button>
+                <n-button class="action-button" secondary type="primary">{{$t('ui.getTag')}}</n-button>
                 <n-tooltip trigger="hover">
                   <template #trigger>
                     <n-button class="action-button" secondary :type="tagServerStatus ? 'primary' : 'error'" disabled tag="div">
@@ -505,20 +587,16 @@ onMounted(()=>{
                 </n-tooltip>
               </n-button-group>
             </template>
-              <n-form-item :label="$t('ui.tagFrom')" :show-feedback="false">
-                <n-switch class="popover-switch" v-model:value="fromDeepdanbooru">
-                  <template #checked>Deepdanbooru</template>
-                  <template #unchecked>Deepdanbooru</template>
-                </n-switch>
-                <n-switch class="popover-switch" v-model:value="fromTxtFile">
-                  <template #checked>{{$t('ui.txtFile')}}</template>
-                  <template #unchecked>{{$t('ui.txtFile')}}</template>
-                </n-switch>
-                <n-switch class="popover-switch" v-model:value="fromFilename">
-                  <template #checked>{{$t('ui.filename')}}</template>
-                  <template #unchecked>{{$t('ui.filename')}}</template>
-                </n-switch>
-              </n-form-item>
+              <n-descriptions label-placement="left" :title="$t('ui.tagFrom')" :column="1">
+                <n-descriptions-item>
+                  <template #label>Deepdanbooru</template>
+                  <n-switch class="popover-switch" v-model:value="fromDeepdanbooru" :disabled="!tagServerStatus"></n-switch>
+                </n-descriptions-item>
+                <n-descriptions-item v-for="item in fromTagSource" :key="item.label">
+                  <template #label>{{item.label}}</template>
+                  <n-switch class="popover-switch" v-model:value="item.value"></n-switch>
+                </n-descriptions-item>
+              </n-descriptions>
           </n-popconfirm>
           <n-divider style="margin: 4px 0;" />
           <n-form :model="setting">
@@ -583,7 +661,18 @@ onMounted(()=>{
         </n-tab-pane>
         <n-tab-pane name="advanced" :tab="$t('ui.advancedSetting')">
           <n-button class="action-button" secondary type="primary" @click="refreshThumb">{{$t('ui.refreshThumb')}}</n-button>
+          <n-button class="action-button" secondary type="primary" @click="openTagCrawlerPath">{{$t('ui.openTagCrawlerPath')}}</n-button>
           <n-divider style="margin: 4px 0;" />
+          <n-form :model="setting">
+            <n-form-item path="predefinedTagList" :label="$t('ui.predefinedTagList')">
+              <n-input
+                v-model:value="setting.predefinedTagList"
+                type="textarea"
+                :autosize="{minRows: 2}"
+                @update:value="saveSetting"
+              />
+            </n-form-item>
+          </n-form>
         </n-tab-pane>
       </n-tabs>
       <template #action>
@@ -616,6 +705,25 @@ body
     max-height: 500px
   .detail-button
     margin: 4px
+
+.viewer-drawer
+  background-color: #202020
+  .viewer-image-frame
+    height: calc(100vh - 40px)
+    display: flex
+    align-items: center
+    justify-content: center
+    .view-close-button
+      position: absolute
+      top: 16px
+      right: 27px
+      font-size: 24px
+    .viewer-image
+      max-height: calc(100vh - 56px)
+      max-width: 100vw
+  .view-action-button
+    font-size: 48px
+    margin-bottom: 8px
 
 .action-button
   margin-right: 4px

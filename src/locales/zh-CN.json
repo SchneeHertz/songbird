@@ -20,6 +20,7 @@
     "serverUpInfo": "Deepdanbooru服务正常",
     "serverDownInfo": "Deepdanbooru服务异常",
     "getTag": "获取标签",
+    "forceGetTag": "强制刷新标签",
     "tagFrom": "标签来自:",
     "txtFile": "txt文件",
     "filename": "文件名",
@@ -31,6 +32,8 @@
     "waterfallGap": "瀑布流横向间距",
     "waterfallThumbWidth": "瀑布流图片宽度",
     "refreshThumb": "刷新缩略图",
+    "openTagCrawlerPath": "打开抓取器路径",
+    "predefinedTagList": "预定义标签列表(以，或,隔开)",
     "save": "保存",
     "close": "关闭"
   },

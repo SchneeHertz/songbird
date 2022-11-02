@@ -484,3 +484,22 @@ ipcMain.handle('save-setting', async (event, receiveSetting)=>{
 ipcMain.handle('get-locale', async(event, arg)=>{
   return app.getLocale()
 })
+
+// tag-crawler
+const tagCrawlerPath = path.join(process.cwd(), 'resources/tag-crawler')
+let crawlerList = glob.sync('*.js', {cwd: tagCrawlerPath})
+let crawlerNameList = crawlerList.map(c=>path.basename(c, '.js'))
+
+ipcMain.handle('get-crawler-list', async ()=>{
+  return crawlerNameList
+})
+
+ipcMain.handle('get-tag-by-crawler', async (event, param)=>{
+  const { crawlerName, filepath } = param
+  const { crawler } = require(path.join(tagCrawlerPath, `${crawlerName}.js`))
+  return await crawler(filepath)
+})
+
+ipcMain.handle('open-tag-crawler-path', async ()=>{
+  return shell.openPath(tagCrawlerPath)
+})

@@ -12,6 +12,7 @@
     "serverUpInfo": "Deepdanbooru server ready",
     "serverDownInfo": "Deepdanbooru server error",
     "getTag": "Get Tag",
+    "forceGetTag": "Force Get Tag",
     "tagFrom": "Tag from:",
     "txtFile": "txt file",
     "filename": "Filename",
@@ -23,6 +24,8 @@
     "waterfallGap": "Waterfall Gap",
     "waterfallThumbWidth": "Waterfall Thumb Width",
     "refreshThumb": "Refresh Thumb",
+    "openTagCrawlerPath": "Open tag-crawler path",
+    "predefinedTagList": "Predefined Tag List(Separated by，or,)",
     "save": "Save",
     "close": "Close"
   },

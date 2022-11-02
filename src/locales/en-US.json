@@ -1,8 +1,19 @@
 {
   "ui": {
-    "view": "view",
+    "addTimeAsc": "AddTimeAsc",
+    "addTimeDesc": "AddTimeDesc",
+    "modifyTimeAsc": "ModifyTimeAsc",
+    "modifyTimeDesc": "ModifyTimeDesc",
+    "filenameAsc": "FilenameAsc",
+    "filenameDesc": "FilenameDesc",
+    "filesizeAsc": "FilesizeAsc",
+    "filesizeDesc": "FilesizeDesc",
+    "view": "View",
     "openLocale": "Open Locale",
     "saveTags": "Save Tag",
+    "previousImage": "Previous Image→",
+    "nextImage": "Next Image←",
+    "nextRandomImage": "Next Image(Random)↓",
     "setting": "Setting",
     "defaultSetting": "Default",
     "advancedSetting": "Advanced",
@@ -18,18 +29,22 @@
     "filename": "Filename",
     "library": "Librarys",
     "addLibraryPath": "Add Library Path",
-    "imageExplorer": "External Viewer",
+    "externalImageExplorer": "External Image Viewer",
     "language": "Language",
     "deepdanbooruTagScoreThreshold": "Deepdanbooru Threshold",
     "waterfallGap": "Waterfall Gap",
     "waterfallThumbWidth": "Waterfall Thumb Width",
     "refreshThumb": "Refresh Thumb",
     "openTagCrawlerPath": "Open tag-crawler path",
+    "openStorePath": "Open setting file path",
     "predefinedTagList": "Predefined Tag List(Separated by，or,)",
+    "rightClick": "Right click on image open...",
+    "internalImageExplorer": "Internal Image Explorer",
     "save": "Save",
     "close": "Close"
   },
   "message": {
-    "startGetTag": "Start getting Tags"
+    "startGetTag": "Start Getting Tags",
+    "firstImage": "First Image"
   }
 }

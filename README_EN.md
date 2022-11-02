@@ -17,6 +17,10 @@ A tag-based image management software
 ## Details
 1. support multiple galleries
 2. doesn't affect the files in the gallery
+3. support sorting
+4. custom tag grabber
+5. predefined add Tag list
+6. built-in image viewer
 
 ## Instructions for use
 1. in the settings window, select the folder containing the images, click on manual scan
@@ -27,9 +31,7 @@ A tag-based image management software
 5. left click on the image to open the details, right click to open the associated external browser
 
 ## Todo
-1. built-in image browser
-2. sorting
-3. archive search results
+1. archive search results
 
 ## Sponsor
 https://afdian.net/@SeldonHorizon

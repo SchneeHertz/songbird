@@ -43,7 +43,7 @@ onMounted(()=>{
 
 // library
 const imageLibrary = ref([])
-onMounted(()=>{
+onBeforeMount(()=>{
   ipcRenderer['send-image']((event, imageList)=>{
     imageList.map(imageObject=>{
       imageObject.folder = imageObject.folder.split('||')
@@ -73,9 +73,10 @@ const onRequestAppend = (e)=>{
 }
 const imageDetail = ref({})
 const showDetailDrawer = ref(false)
-const openDetail = (imageObject)=>{
+const openDetail = (index)=>{
+  viewImageIndex.value = index
   showDetailDrawer.value = true
-  imageDetail.value = imageObject
+  imageDetail.value = resultImageList.value[index]
 }
 const renderTag = (tag, index) => {
   return h(
@@ -139,16 +140,7 @@ const clearSearch = ()=>{
   onRequestAppend({})
 }
 const order = ref('addTime||DESC')
-const orderOptions = [
-  {label: t('ui.addTimeAsc'), value: 'addTime||ASC'},
-  {label: t('ui.addTimeDesc'), value: 'addTime||DESC'},
-  {label: t('ui.modifyTimeAsc'), value: 'modifyTime||ASC'},
-  {label: t('ui.modifyTimeDesc'), value: 'modifyTime||DESC'},
-  {label: t('ui.filenameAsc'), value: 'filename||ASC'},
-  {label: t('ui.filenameDesc'), value: 'filename||DESC'},
-  {label: t('ui.filesizeAsc'), value: 'filesize||ASC'},
-  {label: t('ui.filesizeDesc'), value: 'filesize||DESC'},
-]
+const orderOptions = ref([])
 const handleUpdateOrder = (value)=>{
   emptyList()
   ipcRenderer['search-folder']({folder: _.clone(selectNode.value.folder), order: value})
@@ -220,7 +212,7 @@ const testServer = ()=>{
   })
 }
 onMounted(async ()=>{
-  let crawlerList = await ipcRenderer['get-crawler-list']()  
+  let crawlerList = await ipcRenderer['get-crawler-list']()
   fromTagSource.value = crawlerList.map(label=>({label, value: false}))
   testServer()
   testInterval.value = setInterval(testServer, 10000)
@@ -290,11 +282,45 @@ const getTagForLibrary = async (force)=>{
 // viewer
 const showViewerDrawer = ref(false)
 const viewImageIndex = ref(0)
-const viewImage = (index)=>{
-  console.log(index)
+const viewImage = (index, inner)=>{
   viewImageIndex.value = index
-  showViewerDrawer.value = true
+  if (setting.value.rightClick !== 'externalImageExplorer' || inner) {
+    showViewerDrawer.value = true
+  } else {
+    openWithExternalViewer(resultImageList.value[index].path)
+  }
 }
+const viewBackwardImage = ()=>{
+  if (viewImageIndex.value > 0) viewImageIndex.value--
+}
+const viewForwardImage = ()=>{
+  if (viewImageIndex.value < resultImageList.value.length - 1) {
+    viewImageIndex.value++
+  } else {
+    printMessage('info', t('message.firstImage'))
+    viewImageIndex.value = 0
+  }
+}
+const viewRandomImage = ()=>{
+  viewImageIndex.value = _.random(0, resultImageList.value.length - 1)
+}
+const resolveKey = (event)=>{
+  if (showViewerDrawer.value === true) {
+    if (event.key === 'ArrowRight') {
+      viewForwardImage()
+    } else if (event.key === 'ArrowLeft') {
+      viewBackwardImage()
+    } else if (event.key === 'ArrowDown') {
+      viewRandomImage()
+    }
+  }
+}
+onMounted(()=>{
+  window.addEventListener('keydown', resolveKey)
+})
+onUnmounted(()=>{
+  window.removeEventListener('keydown', resolveKey)
+})
 
 //setting
 const showSettingModel = ref(false)
@@ -369,6 +395,16 @@ const handleLanguageChange = (val)=>{
         i18n.value = 'zh-CN'
         break
     }
+    orderOptions.value = [
+      {label: t('ui.addTimeAsc'), value: 'addTime||ASC'},
+      {label: t('ui.addTimeDesc'), value: 'addTime||DESC'},
+      {label: t('ui.modifyTimeAsc'), value: 'modifyTime||ASC'},
+      {label: t('ui.modifyTimeDesc'), value: 'modifyTime||DESC'},
+      {label: t('ui.filenameAsc'), value: 'filename||ASC'},
+      {label: t('ui.filenameDesc'), value: 'filename||DESC'},
+      {label: t('ui.filesizeAsc'), value: 'filesize||ASC'},
+      {label: t('ui.filesizeDesc'), value: 'filesize||DESC'},
+    ]
     saveSetting()
   })
 }
@@ -397,8 +433,11 @@ const refreshThumb = ()=>{
 const openTagCrawlerPath = ()=>{
   ipcRenderer['open-tag-crawler-path']()
 }
+const openStorePath = ()=>{
+  ipcRenderer['open-store-path']()
+}
 onMounted(()=>{
-  setTimeout(()=>scanLibrary(false), 1000)
+  setTimeout(()=>scanLibrary(false), 2000)
 })
 </script>
 
@@ -478,7 +517,7 @@ onMounted(()=>{
                   height: item.thumbPath ? (setting.waterfallThumbWidth || 200) * item.thumbHeight / item.thumbWidth + 'px' : (setting.waterfallThumbWidth || 200) * item.height / item.width + 'px'
                 }"
                 :src="item.thumbPath ? item.thumbPath : item.path"
-                @click="openDetail(item)"
+                @click="openDetail(index)"
                 @contextmenu="viewImage(index)"
               />
             </div>
@@ -491,7 +530,7 @@ onMounted(()=>{
       :width="600"
     >
       <n-drawer-content class="detail-drawer" :native-scrollbar="false">
-        <img class="detail-image" :src="imageDetail.path" />
+        <img class="detail-image" :src="imageDetail.path" @click="viewImage(viewImageIndex, true)"/>
         <n-divider dashed style="margin: 4px 0;"></n-divider>
         <n-button class="detail-button" size="small" secondary type="primary" @click="openWithExternalViewer(imageDetail.path)">{{$t('ui.view')}}</n-button>
         <n-button class="detail-button" size="small" secondary type="primary" @click="openImageLocale(imageDetail.path)">{{$t('ui.openLocale')}}</n-button>
@@ -523,6 +562,7 @@ onMounted(()=>{
         <n-button
           class="view-close-button"
           text
+          type="primary"
           @click="showViewerDrawer = false"
         ><n-icon><MdClose /></n-icon></n-button>
         <img
@@ -531,18 +571,36 @@ onMounted(()=>{
         />
       </div>
       <n-space justify="center">
-        <n-button
-          class="view-action-button"
-          text
-        ><n-icon><MdSkipBackward /></n-icon></n-button>
-        <n-button
-          class="view-action-button"
-          text
-        ><n-icon><MdSkipForward /></n-icon></n-button>
-        <n-button
-          class="view-action-button"
-          text
-        ><n-icon><MdShuffle /></n-icon></n-button>
+        <n-tooltip :show-arrow="false" trigger="hover" :delay="500">
+          <template #trigger>
+            <n-button
+              class="view-action-button"
+              text
+              @click="viewBackwardImage"
+            ><n-icon><MdSkipBackward /></n-icon></n-button>
+          </template>
+          {{$t('ui.previousImage')}}
+        </n-tooltip>
+        <n-tooltip :show-arrow="false" trigger="hover" :delay="500">
+          <template #trigger>
+            <n-button
+              class="view-action-button"
+              text
+              @click="viewForwardImage"
+            ><n-icon><MdSkipForward /></n-icon></n-button>
+          </template>
+          {{$t('ui.nextImage')}}
+        </n-tooltip>
+        <n-tooltip :show-arrow="false" trigger="hover" :delay="500">
+          <template #trigger>
+            <n-button
+              class="view-action-button"
+              text
+              @click="viewRandomImage"
+            ><n-icon><MdShuffle /></n-icon></n-button>
+          </template>
+          {{$t('ui.nextRandomImage')}}
+        </n-tooltip>
       </n-space>
     </n-drawer>
     <n-modal
@@ -603,6 +661,7 @@ onMounted(()=>{
             <n-form-item path="library" :label="$t('ui.library')">
               <n-dynamic-input
                 v-model:value="setting.library"
+                show-sort-button
                 @create="addLibraryPath"
                 @remove="saveSetting"
               >
@@ -611,7 +670,7 @@ onMounted(()=>{
                 </template>
               </n-dynamic-input>
             </n-form-item>
-            <n-form-item path="imageExplorer" :label="$t('ui.imageExplorer')">
+            <n-form-item path="imageExplorer" :label="$t('ui.externalImageExplorer')">
               <n-input-group>
                 <n-input
                   v-model:value="setting.imageExplorer"
@@ -662,6 +721,7 @@ onMounted(()=>{
         <n-tab-pane name="advanced" :tab="$t('ui.advancedSetting')">
           <n-button class="action-button" secondary type="primary" @click="refreshThumb">{{$t('ui.refreshThumb')}}</n-button>
           <n-button class="action-button" secondary type="primary" @click="openTagCrawlerPath">{{$t('ui.openTagCrawlerPath')}}</n-button>
+          <n-button class="action-button" secondary type="primary" @click="openStorePath">{{$t('ui.openStorePath')}}</n-button>
           <n-divider style="margin: 4px 0;" />
           <n-form :model="setting">
             <n-form-item path="predefinedTagList" :label="$t('ui.predefinedTagList')">
@@ -671,6 +731,12 @@ onMounted(()=>{
                 :autosize="{minRows: 2}"
                 @update:value="saveSetting"
               />
+            </n-form-item>
+            <n-form-item path="rightClick" :label="$t('ui.rightClick')">
+              <n-radio-group v-model:value="setting.rightClick" @update:value="saveSetting">
+                <n-radio value="internalImageExplorer">{{$t('ui.internalImageExplorer')}}</n-radio>
+                <n-radio value="externalImageExplorer">{{$t('ui.externalImageExplorer')}}</n-radio>
+              </n-radio-group>
             </n-form-item>
           </n-form>
         </n-tab-pane>
@@ -709,7 +775,7 @@ body
 .viewer-drawer
   background-color: #202020
   .viewer-image-frame
-    height: calc(100vh - 40px)
+    height: calc(100vh - 56px)
     display: flex
     align-items: center
     justify-content: center
@@ -717,7 +783,7 @@ body
       position: absolute
       top: 16px
       right: 27px
-      font-size: 24px
+      font-size: 36px
     .viewer-image
       max-height: calc(100vh - 56px)
       max-width: 100vw

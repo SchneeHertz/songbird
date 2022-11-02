@@ -242,6 +242,7 @@ ipcMain.handle('refresh-thumb', async ()=>{
 })
 
 ipcMain.handle('load-image-list', async (event, scan)=>{
+  await sequelize.authenticate()
   if (scan) {
     let allCount = 0
     let nowCount = 0
@@ -323,7 +324,10 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
     })
     mainWindow.setProgressBar(-1)
   } else {
-    let loadResult = await Image.findAll({raw: true})
+    let loadResult = await Image.findAll({
+      raw: true,
+      order: [['addTime', 'DESC']]
+    })
     mainWindow.webContents.send('send-image', loadResult)
   }
   let folderData = await Image.findAll({
@@ -502,4 +506,8 @@ ipcMain.handle('get-tag-by-crawler', async (event, param)=>{
 
 ipcMain.handle('open-tag-crawler-path', async ()=>{
   return shell.openPath(tagCrawlerPath)
+})
+
+ipcMain.handle('open-store-path', async ()=>{
+  return shell.openPath(STORE_PATH)
 })

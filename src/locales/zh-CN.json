@@ -11,6 +11,9 @@
     "view": "查看",
     "openLocale": "打开所在位置",
     "saveTags": "保存tag修改",
+    "previousImage": "上一张→",
+    "nextImage": "下一张←",
+    "nextRandomImage": "下一张(随机)↓",
     "setting": "设置",
     "defaultSetting": "常用",
     "advancedSetting": "高级",
@@ -26,18 +29,22 @@
     "filename": "文件名",
     "library": "图库",
     "addLibraryPath": "添加图库位置",
-    "imageExplorer": "外置浏览器",
+    "externalImageExplorer": "外置图片浏览器",
     "language": "语言",
     "deepdanbooruTagScoreThreshold": "Deepdanbooru分数阈值",
     "waterfallGap": "瀑布流横向间距",
     "waterfallThumbWidth": "瀑布流图片宽度",
     "refreshThumb": "刷新缩略图",
     "openTagCrawlerPath": "打开抓取器路径",
+    "openStorePath": "打开配置文件路径",
     "predefinedTagList": "预定义标签列表(以，或,隔开)",
+    "rightClick": "在图片上右键打开",
+    "internalImageExplorer": "内置图片浏览器",
     "save": "保存",
     "close": "关闭"
   },
   "message": {
-    "startGetTag": "开始获取标签"
+    "startGetTag": "开始获取标签",
+    "firstImage": "第一张图片"
   }
 }

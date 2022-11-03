@@ -40,7 +40,8 @@
     "nanoid": "^4.0.0",
     "sequelize": "^6.25.3",
     "sharp": "^0.31.1",
-    "sqlite3": "^5.1.2"
+    "sqlite3": "^5.1.2",
+    "v-viewer": "^3.0.11"
   },
   "devDependencies": {
     "@egjs/vue3-infinitegrid": "^4.7.1",

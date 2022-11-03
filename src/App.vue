@@ -5,10 +5,6 @@ import {
   MdSettings,
   MdArchive,
   MdOpen,
-  MdClose,
-  MdSkipForward,
-  MdSkipBackward,
-  MdShuffle,
   MdCheckmarkCircleOutline,
   MdCloseCircleOutline,
   MdFolderOpen,
@@ -280,18 +276,45 @@ const getTagForLibrary = async (force)=>{
 }
 
 // viewer
-const showViewerDrawer = ref(false)
 const viewImageIndex = ref(0)
 const viewImage = (index, inner)=>{
   viewImageIndex.value = index
   if (setting.value.rightClick !== 'externalImageExplorer' || inner) {
-    showViewerDrawer.value = true
+    triggerVViewer()
   } else {
     openWithExternalViewer(resultImageList.value[index].path)
   }
 }
+let loopImageList = computed(()=>{
+  let start = viewImageIndex.value
+  let end = viewImageIndex.value + 10
+  if (resultImageList.value.length <= 10) {
+    return resultImageList.value
+  } else if (end > resultImageList.value.length) {
+    return _.slice(resultImageList.value, start, resultImageList.value.length).concat(
+      _.slice(resultImageList.value, 0, end - resultImageList.value.length)
+    )
+  } else {
+    return _.slice(resultImageList.value, start, end)
+  }
+})
+let viewerOptions = ref({
+  keyboard: false,
+  transition: false
+})
+let $viewer
+const initViewer = (viewer) =>{
+  $viewer = viewer
+}
+const triggerVViewer = ()=>{
+  $viewer.show()
+}
 const viewBackwardImage = ()=>{
-  if (viewImageIndex.value > 0) viewImageIndex.value--
+  if (viewImageIndex.value > 0) {
+    viewImageIndex.value--
+  } else {
+    viewImageIndex.value = resultImageList.value.length - 1
+  }
 }
 const viewForwardImage = ()=>{
   if (viewImageIndex.value < resultImageList.value.length - 1) {
@@ -305,14 +328,14 @@ const viewRandomImage = ()=>{
   viewImageIndex.value = _.random(0, resultImageList.value.length - 1)
 }
 const resolveKey = (event)=>{
-  if (showViewerDrawer.value === true) {
-    if (event.key === 'ArrowRight') {
-      viewForwardImage()
-    } else if (event.key === 'ArrowLeft') {
-      viewBackwardImage()
-    } else if (event.key === 'ArrowDown') {
+  if (event.key === 'ArrowRight') {
+    if (event.ctrlKey) {
       viewRandomImage()
+    } else {
+      viewForwardImage()
     }
+  } else if (event.key === 'ArrowLeft') {
+    viewBackwardImage()
   }
 }
 onMounted(()=>{
@@ -552,57 +575,17 @@ onMounted(()=>{
         </n-dynamic-tags>
       </n-drawer-content>
     </n-drawer>
-    <n-drawer
-      v-model:show="showViewerDrawer"
-      placement="bottom"
-      height="100%"
-      class="viewer-drawer"
+    <viewer
+      :options="viewerOptions"
+      :images="loopImageList"
+      @inited="initViewer"
+      class="viewer" ref="viewer"
+      style="display:none;"
     >
-      <div class="viewer-image-frame">
-        <n-button
-          class="view-close-button"
-          text
-          type="primary"
-          @click="showViewerDrawer = false"
-        ><n-icon><MdClose /></n-icon></n-button>
-        <img
-          class="viewer-image"
-          :src="resultImageList[viewImageIndex].path"
-        />
-      </div>
-      <n-space justify="center">
-        <n-tooltip :show-arrow="false" trigger="hover" :delay="500">
-          <template #trigger>
-            <n-button
-              class="view-action-button"
-              text
-              @click="viewBackwardImage"
-            ><n-icon><MdSkipBackward /></n-icon></n-button>
-          </template>
-          {{$t('ui.previousImage')}}
-        </n-tooltip>
-        <n-tooltip :show-arrow="false" trigger="hover" :delay="500">
-          <template #trigger>
-            <n-button
-              class="view-action-button"
-              text
-              @click="viewForwardImage"
-            ><n-icon><MdSkipForward /></n-icon></n-button>
-          </template>
-          {{$t('ui.nextImage')}}
-        </n-tooltip>
-        <n-tooltip :show-arrow="false" trigger="hover" :delay="500">
-          <template #trigger>
-            <n-button
-              class="view-action-button"
-              text
-              @click="viewRandomImage"
-            ><n-icon><MdShuffle /></n-icon></n-button>
-          </template>
-          {{$t('ui.nextRandomImage')}}
-        </n-tooltip>
-      </n-space>
-    </n-drawer>
+      <template #default="scope">
+        <img v-for="src in scope.images" :src="src.path" :key="src.id">
+      </template>
+    </viewer>
     <n-modal
       v-model:show="showSettingModel"
       preset="dialog"
@@ -772,24 +755,8 @@ body
   .detail-button
     margin: 4px
 
-.viewer-drawer
-  background-color: #202020
-  .viewer-image-frame
-    height: calc(100vh - 56px)
-    display: flex
-    align-items: center
-    justify-content: center
-    .view-close-button
-      position: absolute
-      top: 16px
-      right: 27px
-      font-size: 36px
-    .viewer-image
-      max-height: calc(100vh - 56px)
-      max-width: 100vw
-  .view-action-button
-    font-size: 48px
-    margin-bottom: 8px
+.viewer-canvas
+  background-color: #000000cc
 
 .action-button
   margin-right: 4px

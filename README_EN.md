@@ -27,9 +27,9 @@ A tag-based image management software
 1. in the settings window, select the folder containing the images, click on manual scan
 2. go to https://github.com/SchneeHertz/deepdanbooru-flask/releases/latest
    download DeepDanbooru-flask server, run it, and keep the cmd window open(close it when you don't want to get tags)
-3. Wait for the server to finish testing in the settings window, and click Get Tags.
+3. Wait for the server to finish testing in the settings dialog, and click Get Tags.
 4. the top search bar supports search tags and file paths, the left side can switch between galleries
-5. left click on the image to open the details, right click to open the associated external browser
+5. Left click on the picture to open the details, right click to open the built-in viewer (can be switched in the settings)
 
 ## Todo
 1. archive search results
@@ -38,5 +38,3 @@ A tag-based image management software
 https://afdian.net/@SeldonHorizon
 
 If this software helps you, you can buy me a cup of milk tea
-
-Translated with www.DeepL.com/Translator (free version)

@@ -30,6 +30,7 @@ A tag-based image management software
 3. Wait for the server to finish testing in the settings dialog, and click Get Tags.
 4. the top search bar supports search tags and file paths, the left side can switch between galleries
 5. Left click on the picture to open the details, right click to open the built-in viewer (can be switched in the settings)
+6. The navigation function of the built-in browser is currently limited to keyboard operation, with the left and right arrow keys switching and Ctrl+right key randomly switching to the next
 
 ## Todo
 1. archive search results

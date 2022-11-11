@@ -16,7 +16,7 @@ import { MasonryInfiniteGrid } from "@egjs/vue3-infinitegrid"
 import { useI18n } from 'vue-i18n'
 import Message from './components/Message.vue'
 import Dialog from './components/Dialog.vue'
-import tags from './assets/tags.json'
+// import tags from './assets/tags.json'
 
 const messageRef = ref(null)
 const dialogRef = ref(null)
@@ -112,7 +112,8 @@ const predefinedTagList = computed(()=>{
   return _.trim(setting.value.predefinedTagList).split(/\s*(?:[,，]|$)\s*/).map(t=>({label:t,value:t}))
 })
 const concatedTags = computed(()=>{
-  return tags.concat(predefinedTagList)
+  // return tags.concat(predefinedTagList)
+  return _(imageLibrary.value.map(i=>i.tags)).flatten().sortBy().sortedUniq().compact().map(t=>({label: t, value: t})).value()
 })
 const searchString = ref([])
 const handleSearch = ()=>{
@@ -135,7 +136,7 @@ const clearSearch = ()=>{
   displayImageList.value = []
   onRequestAppend({})
 }
-const order = ref('addTime||DESC')
+const order = ref(null)
 const orderOptions = ref([])
 const handleUpdateOrder = (value)=>{
   emptyList()
@@ -352,6 +353,7 @@ onMounted(()=>{
   ipcRenderer['load-setting']()
   .then(res=>{
     setting.value = res
+    order.value = setting.value.defaultOrder || 'addTime||DESC'
     handleLanguageChange(setting.value.language)
   })
 })
@@ -419,6 +421,7 @@ const handleLanguageChange = (val)=>{
         break
     }
     orderOptions.value = [
+      {label: t('ui.random'), value: 'random'},
       {label: t('ui.addTimeAsc'), value: 'addTime||ASC'},
       {label: t('ui.addTimeDesc'), value: 'addTime||DESC'},
       {label: t('ui.modifyTimeAsc'), value: 'modifyTime||ASC'},
@@ -436,9 +439,9 @@ const emptyList = ()=>{
   cacheImageList.value = []
   displayImageList.value = []
 }
-const scanLibrary = (scan)=>{
+const scanLibrary = (scan, orderString=order.value)=>{
   emptyList()
-  ipcRenderer['load-image-list'](scan)
+  ipcRenderer['load-image-list']({scan, orderString})
   .then(res=>resolveFoldersList(res))
 }
 const forceScanLibrary = ()=>{
@@ -720,6 +723,14 @@ onMounted(()=>{
                 <n-radio value="internalImageExplorer">{{$t('ui.internalImageExplorer')}}</n-radio>
                 <n-radio value="externalImageExplorer">{{$t('ui.externalImageExplorer')}}</n-radio>
               </n-radio-group>
+            </n-form-item>
+            <n-form-item path="defaultOrder" :label="$t('ui.defaultOrder')">
+              <n-select
+                v-model:value="setting.defaultOrder"
+                :options="orderOptions"
+                :consistent-menu-width="false"
+                @update:value="saveSetting"
+              ></n-select>
             </n-form-item>
           </n-form>
         </n-tab-pane>

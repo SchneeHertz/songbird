@@ -28,7 +28,8 @@ try {
     language: 'default',
     deepdanbooruTagScoreThreshold: 0,
     waterfallGap: 10,
-    waterfallThumbWidth: 200
+    waterfallThumbWidth: 200,
+    defaultOrder: 'addTime||DESC'
   }
   fs.writeFileSync(path.join(STORE_PATH, 'setting.json'), JSON.stringify(setting, null, '  '), {encoding: 'utf-8'})
 }
@@ -241,7 +242,14 @@ ipcMain.handle('refresh-thumb', async ()=>{
   return
 })
 
-ipcMain.handle('load-image-list', async (event, scan)=>{
+ipcMain.handle('load-image-list', async (event, param)=>{
+  let { scan, orderString } = param
+  let order
+  if (orderString === 'random') {
+    order = Sequelize.literal('RANDOM()')
+  } else {
+    order = orderString ? orderString.split('||') : ['addTime', 'DESC']
+  }
   await sequelize.authenticate()
   if (scan) {
     let allCount = 0
@@ -326,7 +334,7 @@ ipcMain.handle('load-image-list', async (event, scan)=>{
   } else {
     let loadResult = await Image.findAll({
       raw: true,
-      order: [['addTime', 'DESC']]
+      order: [order]
     })
     mainWindow.webContents.send('send-image', loadResult)
   }
@@ -419,7 +427,11 @@ ipcMain.handle('show-file', async (event, filepath)=>{
 // folder
 ipcMain.handle('search-folder', async(event, param)=>{
   let {folder, order} = param
-  order = order ? order.split('||') : ['addTime', 'DESC']
+  if (order === 'random') {
+    order = Sequelize.literal('RANDOM()')
+  } else {
+    order = order ? order.split('||') : ['addTime', 'DESC']
+  }
   let result
   if (folder) {
     result = await Image.findAll({

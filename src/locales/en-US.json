@@ -1,5 +1,6 @@
 {
   "ui": {
+    "random": "Random",
     "addTimeAsc": "AddTimeAsc",
     "addTimeDesc": "AddTimeDesc",
     "modifyTimeAsc": "ModifyTimeAsc",
@@ -37,6 +38,7 @@
     "predefinedTagList": "Predefined Tag List(Separated by，or,)",
     "rightClick": "Right click on image open...",
     "internalImageExplorer": "Internal Image Explorer",
+    "defaultOrder": "Default Order",
     "save": "Save",
     "close": "Close"
   },

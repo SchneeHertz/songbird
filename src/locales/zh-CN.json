@@ -1,5 +1,6 @@
 {
   "ui": {
+    "random": "随机",
     "addTimeAsc": "添加时间正序",
     "addTimeDesc": "添加时间倒序",
     "modifyTimeAsc": "修改时间正序",
@@ -37,6 +38,7 @@
     "predefinedTagList": "预定义标签列表(以，或,隔开)",
     "rightClick": "在图片上右键打开",
     "internalImageExplorer": "内置图片浏览器",
+    "defaultOrder": "默认排序",
     "save": "保存",
     "close": "关闭"
   },

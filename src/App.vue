@@ -1,5 +1,5 @@
 <script setup>
-import { zhCN, dateZhCN, enUS, dateEnUS, NIcon, NTag} from 'naive-ui'
+import { zhCN, dateZhCN, enUS, dateEnUS, NIcon, NTag, darkTheme} from 'naive-ui'
 import {
   MdSearch,
   MdSettings,
@@ -220,9 +220,6 @@ onUnmounted(()=>{
 const forceGetTagForLibrary = ()=>{
   getTagForLibrary(true)
 }
-const test = async ()=>{
-  showViewerDrawer.value = true
-}
 const getTagForLibrary = async (force)=>{
   printMessage('info', t('message.startGetTag'))
   try {
@@ -388,7 +385,7 @@ const handleChooseImageExplorer = ()=>{
     }
   })
 }
-const languageOption = [
+const languageOptions = [
   {label: 'default', value: 'default'},
   {label: 'zh-CN', value: 'zh-CN'},
   {label: 'en-US', value: 'en-US'},
@@ -434,6 +431,13 @@ const handleLanguageChange = (val)=>{
     saveSetting()
   })
 }
+const themeOptions = [
+  {label: t('ui.themeLight'), value: 'Light'},
+  {label: t('ui.themeDark'), value: 'Dark'},
+]
+const useTheme = computed(()=>{
+  if (setting.value.theme == 'Dark') return darkTheme
+})
 const emptyList = ()=>{
   imageLibrary.value = []
   cacheImageList.value = []
@@ -468,8 +472,8 @@ onMounted(()=>{
 </script>
 
 <template>
-  <n-config-provider :locale="locale" :date-locale="dateLocale">
-    <n-layout>
+  <n-config-provider :locale="locale" :date-locale="dateLocale" :theme="useTheme">
+    <n-layout content-style="padding:15px 0">
       <n-layout-header>
         <n-space justify="center">
           <n-button class="header-button" type="primary" ghost @click="reloadPage">
@@ -493,7 +497,7 @@ onMounted(()=>{
           <n-button class="header-button" type="primary" ghost @click="showSettingModel = true">
             <template #icon><n-icon><MdSettings /></n-icon></template>
           </n-button>
-          <n-button class="header-button" type="primary" ghost @click="test">
+          <n-button class="header-button" type="primary" ghost>
             <template #icon><n-icon><MdArchive /></n-icon></template>
           </n-button>
           <n-select
@@ -506,6 +510,7 @@ onMounted(()=>{
       </n-layout-header>
       <n-layout has-sider>
         <n-layout-sider
+          class="side-folder"
           bordered
           :native-scrollbar="false"
           collapse-mode="width"
@@ -515,14 +520,13 @@ onMounted(()=>{
           show-trigger
           @collapse="TriggerCollapse"
           @expand="TriggerCollapse"
-          style="margin-top:10px;"
         >
           <n-tree
             :data="folderTree"
             :node-props="nodeProps"
           ></n-tree>
         </n-layout-sider>
-        <n-layout-content content-style="padding:10px;">
+        <n-layout-content content-style="padding:10px 0 0 10px;">
           <masonry-infinite-grid
             :gap="setting.waterfallGap || 10"
             :container="true"
@@ -553,14 +557,25 @@ onMounted(()=>{
     </n-layout>
     <n-drawer
       v-model:show="showDetailDrawer"
-      :width="600"
+      width="50vw"
     >
       <n-drawer-content class="detail-drawer" :native-scrollbar="false">
         <img class="detail-image" :src="imageDetail.path" @click="viewImage(viewImageIndex, true)"/>
         <n-divider dashed style="margin: 4px 0;"></n-divider>
+        <n-descriptions class="detail-image-info" label-placement="left" :column="1" size="small">
+          <n-descriptions-item :label="$t('ui.filename')">{{imageDetail.filename}}</n-descriptions-item>
+          <n-descriptions-item :label="$t('ui.imageSize')">{{imageDetail.width}}×{{imageDetail.height}}</n-descriptions-item>
+          <n-descriptions-item :label="$t('ui.filesize')">
+            {{imageDetail.filesize > 1000000 ? (imageDetail.filesize / 1000000).toFixed(2) + 'MB' : (imageDetail.filesize / 1000).toFixed(2) + 'KB'}}
+          </n-descriptions-item>
+          <n-descriptions-item :label="$t('ui.addTime')"><n-time :time="new Date(imageDetail.addTime)" /></n-descriptions-item>
+          <n-descriptions-item :label="$t('ui.modifyTime')"><n-time :time="new Date(imageDetail.modifyTime)" /></n-descriptions-item>
+        </n-descriptions>
+        <n-divider dashed style="margin: 4px 0;"></n-divider>
         <n-button class="detail-button" size="small" secondary type="primary" @click="openWithExternalViewer(imageDetail.path)">{{$t('ui.view')}}</n-button>
         <n-button class="detail-button" size="small" secondary type="primary" @click="openImageLocale(imageDetail.path)">{{$t('ui.openLocale')}}</n-button>
         <n-button class="detail-button" size="small" secondary type="primary" @click="updateImage">{{$t('ui.saveTags')}}</n-button>
+        <n-divider dashed style="margin: 4px 0;"></n-divider>
         <n-dynamic-tags
           v-model:value="imageDetail.tags"
           size="small"
@@ -666,11 +681,24 @@ onMounted(()=>{
                 </n-button>
               </n-input-group>
             </n-form-item>
+          </n-form>
+          <n-form inline :model="setting" >
             <n-form-item path="language" :label="$t('ui.language')">
               <n-select
+                class="setting-select"
                 v-model:value="setting.language"
-                :options="languageOption"
+                :options="languageOptions"
+                :consistent-menu-width="false"
                 @update:value="handleLanguageChange(setting.language)"
+              ></n-select>
+            </n-form-item>
+            <n-form-item path="theme" :label="$t('ui.theme')">
+              <n-select
+                class="setting-select"
+                v-model:value="setting.theme"
+                :options="themeOptions"
+                :consistent-menu-width="false"
+                @update:value="saveSetting"
               ></n-select>
             </n-form-item>
           </n-form>
@@ -750,9 +778,8 @@ onMounted(()=>{
 </template>
 
 <style lang="stylus">
-body
-  margin: 10px 0 10px 10px
-
+.side-folder
+  padding-top: 10px
 .masonry-container
   height: calc(100vh - 75px)
   .waterfall-image
@@ -761,8 +788,11 @@ body
 .detail-drawer
   text-align: center
   .detail-image
-    max-width: 420px
-    max-height: 500px
+    max-width: 100%
+    max-height: 40vh
+  .detail-image-info
+    text-align: left
+    font-size: 12px
   .detail-button
     margin: 4px
 
@@ -773,4 +803,6 @@ body
   margin-right: 4px
 .popover-switch
   margin-right: 4px
+.setting-select
+  min-width: 160px
 </style>

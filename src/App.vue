@@ -506,6 +506,9 @@ onMounted(()=>{
             :consistent-menu-width="false"
             @update:value="handleUpdateOrder"
           ></n-select>
+          <n-statistic class="statist">
+            {{resultImageList.length}} / {{imageLibrary.length}}
+          </n-statistic>
         </n-space>
       </n-layout-header>
       <n-layout has-sider>
@@ -778,6 +781,9 @@ onMounted(()=>{
 </template>
 
 <style lang="stylus">
+.statist.n-statistic .n-statistic-value .n-statistic-value__content
+  font-size: 16px
+
 .side-folder
   padding-top: 10px
 .masonry-container

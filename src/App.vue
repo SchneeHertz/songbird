@@ -274,6 +274,10 @@ const getTagForLibrary = async (force)=>{
 }
 
 // viewer
+const copyImageToClipboard = (filepath)=>{
+  electronFunction['copy-image-to-clipboard'](filepath)
+  printMessage('info', t('message.imageToClipboard'))
+}
 const viewImageIndex = ref(0)
 const viewImage = (index, inner)=>{
   viewImageIndex.value = index
@@ -563,7 +567,12 @@ onMounted(()=>{
       width="50vw"
     >
       <n-drawer-content class="detail-drawer" :native-scrollbar="false">
-        <img class="detail-image" :src="imageDetail.path" @click="viewImage(viewImageIndex, true)"/>
+        <img
+          class="detail-image"
+          :src="imageDetail.path"
+          @click="viewImage(viewImageIndex, true)"
+          @contextmenu="copyImageToClipboard(imageDetail.path)"
+        />
         <n-divider dashed style="margin: 4px 0;"></n-divider>
         <n-descriptions class="detail-image-info" label-placement="left" :column="1" size="small">
           <n-descriptions-item :label="$t('ui.filename')">{{imageDetail.filename}}</n-descriptions-item>

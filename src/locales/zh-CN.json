@@ -51,6 +51,7 @@
   },
   "message": {
     "startGetTag": "开始获取标签",
-    "firstImage": "第一张图片"
+    "firstImage": "第一张图片",
+    "imageToClipboard": "已复制图片至剪贴板"
   }
 }

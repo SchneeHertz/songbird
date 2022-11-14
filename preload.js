@@ -21,3 +21,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   'open-tag-crawler-path': ()=>ipcRenderer.invoke('open-tag-crawler-path'),
   'open-store-path': ()=>ipcRenderer.invoke('open-store-path'),
 })
+
+contextBridge.exposeInMainWorld('electronFunction', {
+  'copy-image-to-clipboard': (filepath)=>clipboard.writeImage(nativeImage.createFromPath(filepath)),
+  'copy-text-to-clipboard': (text)=>clipboard.writeText(text),
+  'read-text-from-clipboard': ()=>clipboard.readText()
+})

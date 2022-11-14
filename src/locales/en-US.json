@@ -8,7 +8,7 @@
     "filenameAsc": "FilenameAsc",
     "filenameDesc": "FilenameDesc",
     "filesizeAsc": "FilesizeAsc",
-    "filesizeDesc": "FilesizeDesc",    
+    "filesizeDesc": "FilesizeDesc",
     "imageSize": "Image Size",
     "filesize": "Filesize",
     "addTime": "Add Time",
@@ -51,6 +51,7 @@
   },
   "message": {
     "startGetTag": "Start Getting Tags",
-    "firstImage": "First Image"
+    "firstImage": "First Image",
+    "imageToClipboard": "Copyed Image to Clipboard"
   }
 }

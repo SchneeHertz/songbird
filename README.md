@@ -34,6 +34,7 @@
 
 ## 坑
 1. 存档搜索结果
+2. 首屏优化
 
 ## 赞助
 https://afdian.net/@SeldonHorizon

@@ -155,23 +155,24 @@ const resolveFoldersList = (foldersList)=>{
   let folderTreeObject = {}
   for(let foldersStr of foldersList){
     let folders = foldersStr.split('||')
-    _.set(folderTreeObject, folders, {})
+    _.set(folderTreeObject, folders.map(f=>'_'+f), {})
   }
   let resolveTree = (preRoot, tree, initFolder)=>{
     _.forIn(tree, (node, label)=>{
+      let trueLabel = label.slice(1)
       if (_.isEmpty(node)) {
         preRoot.push({
-          label,
+          label: trueLabel,
           key: nanoid(),
-          folder: [...initFolder, label],
+          folder: [...initFolder, trueLabel],
           prefix: ()=>h(NIcon, {}, {default: ()=>h(MdFolderOpen)})
         })
       } else {
         preRoot.push({
-          label,
+          label: trueLabel,
           key: nanoid(),
-          folder: [...initFolder, label],
-          children: resolveTree([], node, [...initFolder, label]),
+          folder: [...initFolder, trueLabel],
+          children: resolveTree([], node, [...initFolder, trueLabel]),
           prefix: ()=>h(NIcon, {}, {default: ()=>h(MdFolderOpen)})
         })
       }

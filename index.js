@@ -75,7 +75,7 @@ function createWindow () {
   return win
 }
 
-app.disableHardwareAcceleration()
+// app.disableHardwareAcceleration()
 app.whenReady()
 .then(async()=>{
   return await sequelize.authenticate()
